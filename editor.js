@@ -130,6 +130,28 @@ class PrusaCardEditor extends LitElement {
     `;
   }
 
+  constructor() {
+    super();
+    this._config = {};
+    this._helpersLoaded = false;
+  }
+
+  async firstUpdated() {
+    // Wait for Home Assistant custom elements to be defined
+    await this._waitForHui();
+    this._helpersLoaded = true;
+    this.requestUpdate();
+  }
+
+  async _waitForHui() {
+    // Wait for ha-entity-picker to be defined
+    if (!customElements.get('ha-entity-picker')) {
+      await customElements.whenDefined('ha-entity-picker');
+    }
+    // Small delay to ensure all HA UI components are ready
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+
   setConfig(config) {
     this._config = config ? { ...config } : {};
     this.requestUpdate();
@@ -364,9 +386,28 @@ class PrusaCardEditor extends LitElement {
     return labels[type] || type;
   }
 
+  _isCustomElementDefined(tagName) {
+    return customElements.get(tagName) !== undefined;
+  }
+
   render() {
     if (!this.hass || !this._config) {
       return html``;
+    }
+
+    // Wait for Home Assistant UI components to be loaded
+    if (!this._helpersLoaded) {
+      return html`
+        <div class="form">
+          <div class="section">
+            <div class="section-title">
+              <ha-icon icon="mdi:loading"></ha-icon>
+              <span>Lade Editor...</span>
+            </div>
+            <div class="field-help">Bitte warten, die Editor-Komponenten werden geladen.</div>
+          </div>
+        </div>
+      `;
     }
 
     return html`
