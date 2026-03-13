@@ -75,14 +75,16 @@ class PrinterCardV2Editor extends HTMLElement {
       this._formEl.addEventListener("value-changed", (e) => {
         this._config = e.detail.value;
         this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: this._config } }));
-        // Defer schema + data update by one microtask so ha-form finishes
-        // processing the current event before receiving a new schema.
-        // Without this, selecting "Custom Upload" never shows the upload field
-        // because ha-form ignores schema changes mid-event.
-        Promise.resolve().then(() => {
+        // Defer schema + data update to the next macrotask (setTimeout) so
+        // ha-form fully completes its own internal rendering/update cycle
+        // before receiving the new schema.  A microtask (Promise.resolve)
+        // fires too early — ha-form is still processing its own lit-element
+        // update queue at that point and silently drops the schema change,
+        // which is why selecting "Custom Upload" never showed the upload field.
+        setTimeout(() => {
           this._formEl.schema = this._schema();
           this._formEl.data = { ...this._config };
-        });
+        }, 0);
       });
       this.appendChild(this._formEl);
     }
