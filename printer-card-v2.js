@@ -33,7 +33,7 @@ class PrinterCardV2Editor extends HTMLElement {
       { name: "filament_entity",        label: "Filament-Sensor (idle)",              selector: { entity: { domain: "sensor" } } },
       { name: "last_job_entity",        label: "Letzter Job Sensor (idle)",           selector: { entity: { domain: "sensor" } } },
       { name: "pause_button_entity",    label: "Pause-Entität",                       selector: { entity: { domain: ["button","script","input_button"] } } },
-      { name: "printer_image_entity",   label: "Eigenes Bild (falls keine Kamera)",   selector: { media: {} } },
+      { name: "printer_image_entity",   label: "Drucker-Bild",                        selector: { entity: { domain: ["sensor", "camera"] } } },
     ];
   }
 
