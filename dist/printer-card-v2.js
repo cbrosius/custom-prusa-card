@@ -215,27 +215,8 @@ class PrinterCardV2 extends HTMLElement {
   }
 
   _updateLayerValue() {
-    const curId = this._config.current_layer_entity;
-    if (!curId || !this._hass?.states[curId]) return;
-
-    const totId = this._config.total_layers_entity;
-    const curState = this._hass.states[curId].state;
-    const totState = totId && this._hass?.states[totId] ? this._hass.states[totId].state : null;
-    
-    let display = curState;
-    if (totState && totState !== "unavailable" && totState !== "unknown") {
-      display = `${curState} / ${totState}`;
-    }
-
-    // Update Mushroom Template Card
-    const mushroomTile = this.shadowRoot.querySelector("mushroom-template-card.mushroom-layer-tile");
-    if (mushroomTile) {
-      // Set properties directly and via attributes to be sure
-      if (mushroomTile.secondary !== display) {
-        mushroomTile.secondary = display;
-        if (mushroomTile.requestUpdate) mushroomTile.requestUpdate();
-      }
-    }
+    // No longer needed manually as we use Jinja templates in _buildLayerTile
+    // Mushroom handles the updates itself when hass changes.
   }
 
   _updateProgressBar() {
@@ -602,14 +583,22 @@ class PrinterCardV2 extends HTMLElement {
     const curId = this._config.current_layer_entity;
     if (!curId) return null;
 
+    const totId = this._config.total_layers_entity;
+    // Use official Home Assistant Jinja templates for reliable updates
+    let secondary = `{{ states('${curId}') }}`;
+    if (totId) {
+      secondary = `{{ states('${curId}') }} / {{ states('${totId}') }}`;
+    }
+
     const tile = document.createElement("mushroom-template-card");
     tile.className = "mushroom-layer-tile";
     tile.setConfig({
       type: "custom:mushroom-template-card",
       primary: "Layer",
-      secondary: "—",
+      secondary: secondary,
       icon: "mdi:layers-triple",
       icon_color: "orange",
+      layout: "horizontal",
       tap_action: { action: "more-info" },
       entity: curId
     });
