@@ -1,6 +1,6 @@
-# Prusa 3D Printer Card
+# Custom 3D Printer Card
 
-Eine Home Assistant Custom Card für Prusa 3D-Drucker mit Mushroom Design.
+Eine Home Assistant Custom Card für 3D-Drucker mit Mushroom Design.
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -9,7 +9,6 @@ Eine Home Assistant Custom Card für Prusa 3D-Drucker mit Mushroom Design.
 ## Features
 
 - **GUI-Konfiguration**: Vollständig konfigurierbar über die Home Assistant UI
-- **Automatische Entitätserkennung**: Erkennt alle PrusaLink-Entitäten automatisch bei Geräteauswahl
 - **Mushroom Design**: Modernes, ansprechendes Design mit dynamischen Statusanzeigen
 - **Status-basierte Anzeige**: Verschiedene Ansichten je nach Druckerstatus
 
@@ -50,16 +49,14 @@ Eine Home Assistant Custom Card für Prusa 3D-Drucker mit Mushroom Design.
 
 ### Manuelle Installation
 
-1. Lade die Dateien `custom-prusa-card.js` und `editor.js` herunter
-2. Kopiere sie in das Verzeichnis `config/www/custom-prusa-card/`
+1. Lade die Dateien aus dem `dist`-Ordner herunter
+2. Kopiere sie in das Verzeichnis `config/www/community/custom-prusa-card/`
 3. Füge folgende Ressourcen in deine Lovelace-Dashboard-Konfiguration ein:
 
 ```yaml
 resources:
   - type: module
-    url: /local/custom-prusa-card/custom-prusa-card.js
-  - type: module
-    url: /local/custom-prusa-card/editor.js
+    url: /hacsfiles/custom-prusa-card/printer-card-v2.js
 ```
 
 ## Konfiguration
@@ -76,7 +73,7 @@ resources:
 
 ```yaml
 type: custom:prusa-card
-name: Mein Prusa Drucker
+name: Mein 3D Drucker
 icon: mdi:printer-3d
 device: <device_id>
 # Oder manuelle Entitätszuweisung:
@@ -131,18 +128,6 @@ Die Card erkennt automatisch folgende PrusaLink-Entitäten basierend auf ihren N
 | Gesamtlayers | `sensor.*layer*total*`, `sensor.*layers*` |
 | Lüfter | `sensor.*fan*` |
 
-## Styling
-
-Die Card verwendet Mushroom-ähnliche CSS-Variablen und kann über Home Assistant's Theme-System angepasst werden:
-
-```yaml
-# theme.yaml
-prusa-card:
-  # Primäre Farben
-  --rgb-primary: 33, 150, 243
-  --rgb-accent-color: 255, 152, 0
-  --rgb-disabled: 128, 128, 128
-```
 
 ## Mitwirken
 
@@ -155,7 +140,6 @@ MIT License
 ## Danksagung
 
 - [Home Assistant](https://www.home-assistant.io/)
-- [PrusaLink Integration](https://www.home-assistant.io/integrations/prusalink/)
 - [Mushroom Cards](https://github.com/piitaya/lovelace-mushroom) für das Design-Inspiration
 
 ## Support
