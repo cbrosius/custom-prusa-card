@@ -15,7 +15,7 @@ class PrinterCardV2Editor extends HTMLElement {
   set hass(hass) { this._hass = hass; this._render(); }
   setConfig(config) { this._config = { ...config }; this._render(); }
 
-  _schema() {
+  _baseSchema() {
     return [
       { name: "name", label: "Drucker Name", selector: { text: {} } },
       { name: "printer_status_entity", label: "Drucker-Status Sensor", selector: { entity: {} } },
@@ -41,9 +41,7 @@ class PrinterCardV2Editor extends HTMLElement {
               { label: "Prusa Core XY", value: "PrusaCoreOne.jpg" },
               { label: "Prusa Mini", value: "PrusaMini.jpg" },
               { label: "A1 Mini", value: "A1Mini.jpg" },
-              { label: "Custom1", value: "Custom1.jpg" },
-              { label: "Custom2", value: "Custom2.jpg" },
-              { label: "Custom3", value: "Custom3.jpg" },
+              { label: "Custom Upload", value: "custom" },              
             ]
           }
         }
@@ -56,12 +54,27 @@ class PrinterCardV2Editor extends HTMLElement {
     ];
   }
 
+  _schema() {
+    const schema = [...this._baseSchema()];
+    // Dynamically add image upload field only when "custom" is selected
+    if (this._config.printer_image === "custom") {
+      schema.push({
+        name: "custom_image",
+        label: "Benutzerdefiniertes Bild hochladen",
+        selector: { image: {} }
+      });
+    }
+    return schema;
+  }
+
   _render() {
     if (!this._hass || !customElements.get("ha-form")) return;
     if (!this._formEl) {
       this._formEl = document.createElement("ha-form");
       this._formEl.addEventListener("value-changed", (e) => {
         this._config = e.detail.value;
+        // Re-render to update schema dynamically
+        this._render();
         this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: this._config } }));
       });
       this.appendChild(this._formEl);
@@ -144,6 +157,25 @@ class PrinterCardV2 extends HTMLElement {
       }
     };
     pre.src = src;
+  }
+
+  // ── Image resolution helper ─────────────────────────────
+  _getPrinterImage() {
+    const model = this._config.printer_image || "";
+    
+    if (model === "custom") {
+      // Return the user's uploaded image, with fallback
+      return this._config.custom_image || "/hacsfiles/custom-prusa-card/default-printer.png";
+    }
+    
+    if (model) {
+      // Return bundled image based on dropdown selection
+      const scriptPath = new URL(import.meta.url).pathname;
+      const basePath = scriptPath.substring(0, scriptPath.lastIndexOf('/'));
+      return `${basePath}/images/${model}`;
+    }
+    
+    return null;
   }
 
   // ── Status detection — reads raw sensor value from HA ────
@@ -288,15 +320,13 @@ class PrinterCardV2 extends HTMLElement {
     wrap.className = "view-unavail";
 
     // Show printer image if configured
-    const customImg = this._config.printer_image;
-    if (customImg && this._config.show_printer_image_when_off) {
+    const imgUrl = this._getPrinterImage();
+    if (imgUrl && this._config.show_printer_image_when_off) {
       const imgWrap = document.createElement("div");
       imgWrap.className = "unavail-printer-image";
 
       const img = document.createElement("img");
-      const scriptPath = new URL(import.meta.url).pathname;
-      const basePath = scriptPath.substring(0, scriptPath.lastIndexOf('/'));
-      img.src = `${basePath}/images/${customImg}`;
+      img.src = imgUrl;
       img.alt = "Drucker";
       imgWrap.appendChild(img);
       wrap.appendChild(imgWrap);
@@ -334,17 +364,14 @@ class PrinterCardV2 extends HTMLElement {
     };
 
     // Custom printer image (shown when no camera available)
-    const customImg = this._config.printer_image;
+    const imgUrl = this._getPrinterImage();
     let showLiveBadge = false;
 
-    if (customImg) {
-      // If custom image is selected from the dropdown, use the local image file
+    if (imgUrl) {
+      // Use the resolved image URL (handles both bundled and custom uploads)
       const img = document.createElement("img");
       img.className = "camera-img printer-custom-img";
-      // Use relative path from /local/ - works regardless of folder name
-      const scriptPath = new URL(import.meta.url).pathname;
-      const basePath = scriptPath.substring(0, scriptPath.lastIndexOf('/'));
-      img.src = `${basePath}/images/${customImg}`;
+      img.src = imgUrl;
       img.alt = "Drucker";
       wrap.appendChild(img);
     } else if (this._config.printer_image_entity && this._hass) {
