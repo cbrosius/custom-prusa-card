@@ -17,26 +17,26 @@ class PrinterCardV2Editor extends HTMLElement {
 
   _schema() {
     return [
-      { name: "name",                   label: "Drucker Name",                        selector: { text: {} } },
-      { name: "printer_status_entity",  label: "Drucker-Status Sensor",               selector: { entity: {} } },
-      { name: "camera_entity",          label: "Kamera",                              selector: { entity: { domain: "camera" } } },
-      { name: "power_switch_entity",    label: "Spannungsversorgungs-Schalter",       selector: { entity: { domain: ["switch","input_boolean"] } } },
-      { name: "bed_temp_entity",        label: "Druckbett-Temperatur Sensor",         selector: { entity: { domain: "sensor" } } },
-      { name: "nozzle_temp_entity",     label: "Nozzle-Temperatur Sensor",            selector: { entity: { domain: "sensor" } } },
-      { name: "print_progress_entity",  label: "Druckfortschritt (%) Sensor",         selector: { entity: { domain: "sensor" } } },
-      { name: "print_time_entity",      label: "Bisherige Druckzeit Sensor",          selector: { entity: { domain: "sensor" } } },
-      { name: "print_time_left_entity", label: "Restlaufzeit Sensor",                 selector: { entity: { domain: "sensor" } } },
-      { name: "current_layer_entity",   label: "Aktueller Layer Sensor",              selector: { entity: { domain: "sensor" } } },
-      { name: "total_layers_entity",    label: "Gesamt-Layer Sensor",                 selector: { entity: { domain: "sensor" } } },
-      { name: "thumbnail_entity",       label: "Modell-Vorschaubild (Sensor/Entity)", selector: { entity: {} } },
-      { name: "job_name_entity",        label: "Dateiname / Job-Name Sensor",         selector: { entity: { domain: "sensor" } } },
+      { name: "name", label: "Drucker Name", selector: { text: {} } },
+      { name: "printer_status_entity", label: "Drucker-Status Sensor", selector: { entity: {} } },
+      { name: "camera_entity", label: "Kamera", selector: { entity: { domain: "camera" } } },
+      { name: "power_switch_entity", label: "Spannungsversorgungs-Schalter", selector: { entity: { domain: ["switch", "input_boolean"] } } },
+      { name: "bed_temp_entity", label: "Druckbett-Temperatur Sensor", selector: { entity: { domain: "sensor" } } },
+      { name: "nozzle_temp_entity", label: "Nozzle-Temperatur Sensor", selector: { entity: { domain: "sensor" } } },
+      { name: "print_progress_entity", label: "Druckfortschritt (%) Sensor", selector: { entity: { domain: "sensor" } } },
+      { name: "print_time_entity", label: "Bisherige Druckzeit Sensor", selector: { entity: { domain: "sensor" } } },
+      { name: "print_time_left_entity", label: "Restlaufzeit Sensor", selector: { entity: { domain: "sensor" } } },
+      { name: "current_layer_entity", label: "Aktueller Layer Sensor", selector: { entity: { domain: "sensor" } } },
+      { name: "total_layers_entity", label: "Gesamt-Layer Sensor", selector: { entity: { domain: "sensor" } } },
+      { name: "thumbnail_entity", label: "Modell-Vorschaubild (Sensor/Entity)", selector: { entity: {} } },
+      { name: "job_name_entity", label: "Dateiname / Job-Name Sensor", selector: { entity: { domain: "sensor" } } },
 
-      { name: "pause_button_entity",    label: "Pause-Entität",                       selector: { entity: { domain: ["button","script","input_button"] } } },
-      { 
-        name: "printer_image", 
-        label: "Drucker-Bild", 
-        selector: { 
-          select: { 
+      { name: "pause_button_entity", label: "Pause-Entität", selector: { entity: { domain: ["button", "script", "input_button"] } } },
+      {
+        name: "printer_image",
+        label: "Drucker-Bild",
+        selector: {
+          select: {
             options: [
               { label: "Kein Bild", value: "" },
               { label: "Prusa Core XY", value: "PrusaCoreOne.jpg" },
@@ -45,14 +45,14 @@ class PrinterCardV2Editor extends HTMLElement {
               { label: "Custom1", value: "Custom1.jpg" },
               { label: "Custom2", value: "Custom2.jpg" },
               { label: "Custom3", value: "Custom3.jpg" },
-            ] 
-          } 
-        } 
+            ]
+          }
+        }
       },
-      { 
-        name: "show_printer_image_when_off", 
-        label: "Zeige Drucker-Bild, wenn der Drucker aus ist", 
-        selector: { boolean: {} } 
+      {
+        name: "show_printer_image_when_off",
+        label: "Zeige Drucker-Bild, wenn der Drucker aus ist",
+        selector: { boolean: {} }
       },
     ];
   }
@@ -67,9 +67,9 @@ class PrinterCardV2Editor extends HTMLElement {
       });
       this.appendChild(this._formEl);
     }
-    this._formEl.hass         = this._hass;
-    this._formEl.data         = this._config;
-    this._formEl.schema       = this._schema();
+    this._formEl.hass = this._hass;
+    this._formEl.data = this._config;
+    this._formEl.schema = this._schema();
     this._formEl.computeLabel = (s) => s.label || s.name;
   }
 }
@@ -83,12 +83,12 @@ class PrinterCardV2 extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    this._config      = {};
-    this._hass        = null;
-    this._lastStatus  = null;
+    this._config = {};
+    this._hass = null;
+    this._lastStatus = null;
     this._camInterval = null;
     // Reusable native tile elements, keyed by entity role
-    this._tiles       = {};
+    this._tiles = {};
   }
 
   static getConfigElement() { return document.createElement("printer-card-v2-editor"); }
@@ -97,9 +97,9 @@ class PrinterCardV2 extends HTMLElement {
   }
 
   setConfig(config) {
-    this._config     = config;
+    this._config = config;
     this._lastStatus = null; // force structural rebuild
-    this._tiles      = {};
+    this._tiles = {};
     this._render();
   }
 
@@ -140,10 +140,10 @@ class PrinterCardV2 extends HTMLElement {
     const stateObj = this._hass.states[this._config.printer_status_entity];
     if (!stateObj) return "unavailable";
     const raw = stateObj.state.toLowerCase();
-    if (raw === "unavailable" || raw === "unknown" || raw === "off"|| raw === "offline") return "unavailable";
-    if (raw.includes("print")||raw.includes("printing")||raw.includes("running")||raw.includes("working")) return "printing";
+    if (raw === "unavailable" || raw === "unknown" || raw === "off" || raw === "offline") return "unavailable";
+    if (raw.includes("print") || raw.includes("printing") || raw.includes("running") || raw.includes("working")) return "printing";
     if (raw.includes("idle") || raw.includes("standby") || raw.includes("ready") ||
-        raw.includes("finish") || raw.includes("operational") || raw === "on") return "idle";
+      raw.includes("finish") || raw.includes("operational") || raw === "on") return "idle";
     // Fallback: if entity exists and has a real value, treat as idle rather than unavailable
     return "idle";
   }
@@ -155,12 +155,81 @@ class PrinterCardV2 extends HTMLElement {
     this.shadowRoot.querySelectorAll(
       "hui-tile-card, ha-icon-button, ha-state-label-badge, hui-image-card"
     ).forEach(el => { if (el.hass !== this._hass) el.hass = this._hass; });
+
+    // Update custom text elements
+    this._updateJobName();
+    this._updateTimeValues();
+    this._updateLayerValue();
+    this._updateProgressBar();
+  }
+
+  _updateJobName() {
+    const jobNameEl = this.shadowRoot.querySelector(".job-name");
+    if (!jobNameEl) return;
+    const jobId = this._config.job_name_entity;
+    if (jobId && this._hass?.states[jobId]) {
+      const fileName = this._hass.states[jobId].state || "—";
+      jobNameEl.textContent = fileName;
+    }
+  }
+
+  _updateTimeValues() {
+    const timeValues = this.shadowRoot.querySelectorAll(".t-value");
+    if (!timeValues.length) return;
+
+    // First t-value is ELAPSED, second is REMAINING
+    const elapsedEl = timeValues[0];
+    const remainingEl = timeValues[1];
+
+    if (elapsedEl) {
+      const entityId = this._config.print_time_entity;
+      if (entityId && this._hass?.states[entityId]) {
+        const state = this._hass.states[entityId].state;
+        const unit = this._hass.states[entityId].attributes?.unit_of_measurement || "";
+        elapsedEl.textContent = state !== "unavailable" && state !== "unknown" ? `${state} ${unit}`.trim() : "—";
+      }
+    }
+
+    if (remainingEl) {
+      const entityId = this._config.print_time_left_entity;
+      if (entityId && this._hass?.states[entityId]) {
+        const state = this._hass.states[entityId].state;
+        const unit = this._hass.states[entityId].attributes?.unit_of_measurement || "";
+        remainingEl.textContent = state !== "unavailable" && state !== "unknown" ? `${state} ${unit}`.trim() : "—";
+      }
+    }
+  }
+
+  _updateLayerValue() {
+    const layerValueEl = this.shadowRoot.querySelector(".layer-value");
+    if (!layerValueEl) return;
+
+    const curId = this._config.current_layer_entity;
+    const totId = this._config.total_layers_entity;
+
+    if (curId && this._hass?.states[curId]) {
+      const curState = this._hass.states[curId].state;
+      const totState = totId && this._hass?.states[totId] ? this._hass.states[totId].state : null;
+
+      if (totState && totState !== "unavailable" && totState !== "unknown") {
+        layerValueEl.textContent = `${curState} / ${totState}`;
+      } else {
+        layerValueEl.textContent = curState;
+      }
+    }
+  }
+
+  _updateProgressBar() {
+    const progressFill = this.shadowRoot.querySelector(".progress-fill");
+    if (!progressFill) return;
+    const pct = this._pct();
+    progressFill.style.width = pct + "%";
   }
 
   // ── Full structural render ────────────────────────────────
   _render() {
     if (!this._hass) return;
-    const sr     = this.shadowRoot;
+    const sr = this.shadowRoot;
     const status = this._lastStatus || this._status();
 
     // Clear and rebuild
@@ -192,7 +261,7 @@ class PrinterCardV2 extends HTMLElement {
     if (customImg && this._config.show_printer_image_when_off) {
       const imgWrap = document.createElement("div");
       imgWrap.className = "unavail-printer-image";
-      
+
       const img = document.createElement("img");
       const scriptPath = new URL(import.meta.url).pathname;
       const basePath = scriptPath.substring(0, scriptPath.lastIndexOf('/'));
@@ -232,7 +301,7 @@ class PrinterCardV2 extends HTMLElement {
     // Custom printer image (shown when no camera available)
     const customImg = this._config.printer_image;
     let showLiveBadge = false;
-    
+
     if (customImg) {
       // If custom image is selected from the dropdown, use the local image file
       const img = document.createElement("img");
@@ -247,7 +316,7 @@ class PrinterCardV2 extends HTMLElement {
       // Backward compatibility: support for entity-based images
       const customImgId = this._config.printer_image_entity;
       let customImgUrl = null;
-      
+
       // Check if it's a media entity (from media picker)
       if (customImgId.startsWith("media-source://")) {
         customImgUrl = customImgId;
@@ -257,7 +326,7 @@ class PrinterCardV2 extends HTMLElement {
           ? this._hass.states[customImgId].state
           : this._hass?.states[customImgId]?.attributes?.entity_picture;
       }
-      
+
       if (customImgUrl) {
         const img = document.createElement("img");
         img.className = "camera-img printer-custom-img";
@@ -272,7 +341,7 @@ class PrinterCardV2 extends HTMLElement {
       const camId = this._config.camera_entity;
       if (camId && this._hass) {
         const token = this._hass.states[camId]?.attributes?.access_token;
-        const src   = token ? `/api/camera_proxy/${camId}?token=${token}&t=${Date.now()}` : null;
+        const src = token ? `/api/camera_proxy/${camId}?token=${token}&t=${Date.now()}` : null;
         if (src) {
           const img = document.createElement("img");
           img.className = "camera-img";
@@ -316,7 +385,7 @@ class PrinterCardV2 extends HTMLElement {
     wrap.appendChild(overlay);
 
     // Live badge - only show when camera feed is available
-    const hasCamera = this._config.camera_entity && this._hass && 
+    const hasCamera = this._config.camera_entity && this._hass &&
       this._hass.states[this._config.camera_entity]?.attributes?.access_token;
     if (hasCamera) {
       const live = document.createElement("div");
@@ -342,7 +411,7 @@ class PrinterCardV2 extends HTMLElement {
 
     const tempRow = document.createElement("div");
     tempRow.className = "temp-row";
-    tempRow.appendChild(this._buildTile(this._config.bed_temp_entity,    "mdi:thermometer",            "blue"));
+    tempRow.appendChild(this._buildTile(this._config.bed_temp_entity, "mdi:thermometer", "blue"));
     tempRow.appendChild(this._buildTile(this._config.nozzle_temp_entity, "mdi:printer-3d-nozzle-heat", "blue"));
     wrap.appendChild(tempRow);
 
@@ -358,7 +427,7 @@ class PrinterCardV2 extends HTMLElement {
     infoRow.className = "print-info-row";
 
     // Thumbnail
-    const thumbId  = this._config.thumbnail_entity;
+    const thumbId = this._config.thumbnail_entity;
     const thumbUrl = thumbId ? (this._hass?.states[thumbId]?.state?.startsWith("http")
       ? this._hass.states[thumbId].state
       : this._hass?.states[thumbId]?.attributes?.entity_picture) : null;
@@ -383,12 +452,9 @@ class PrinterCardV2 extends HTMLElement {
     const jobName = document.createElement("div");
     jobName.className = "job-name";
     const jobId = this._config.job_name_entity;
-    if (jobId) {
-      const badge = document.createElement("ha-state-label-badge");
-      badge.className = "job-name-badge";
-      badge.label = "";
-      this._tiles["job_name"] = badge;
-      jobName.appendChild(badge);
+    if (jobId && this._hass?.states[jobId]) {
+      const fileName = this._hass.states[jobId].state || "—";
+      jobName.textContent = fileName;
     } else {
       jobName.textContent = "—";
     }
@@ -396,7 +462,7 @@ class PrinterCardV2 extends HTMLElement {
 
     const timeRow = document.createElement("div");
     timeRow.className = "time-row";
-    timeRow.appendChild(this._buildTimeCol("ELAPSED",   this._config.print_time_entity,      false));
+    timeRow.appendChild(this._buildTimeCol("ELAPSED", this._config.print_time_entity, false));
     timeRow.appendChild(this._buildTimeCol("REMAINING", this._config.print_time_left_entity, true));
     jobInfo.appendChild(timeRow);
     infoRow.appendChild(jobInfo);
@@ -423,11 +489,11 @@ class PrinterCardV2 extends HTMLElement {
 
     // Layer: combine current + total manually since it's two entities
     grid.appendChild(this._buildLayerTile());
-    grid.appendChild(this._buildTile(this._config.print_progress_entity,  "mdi:percent",                 "orange"));
-    grid.appendChild(this._buildTile(this._config.bed_temp_entity,        "mdi:radiator",                "orange"));
-    grid.appendChild(this._buildTile(this._config.nozzle_temp_entity,     "mdi:printer-3d-nozzle-heat",  "orange"));
-    grid.appendChild(this._buildTile(this._config.print_time_entity,      "mdi:clock-outline",           "orange"));
-    grid.appendChild(this._buildTile(this._config.print_time_left_entity, "mdi:clock-end",               "orange"));
+    grid.appendChild(this._buildTile(this._config.print_progress_entity, "mdi:percent", "orange"));
+    grid.appendChild(this._buildTile(this._config.bed_temp_entity, "mdi:radiator", "orange"));
+    grid.appendChild(this._buildTile(this._config.nozzle_temp_entity, "mdi:printer-3d-nozzle-heat", "orange"));
+    grid.appendChild(this._buildTile(this._config.print_time_entity, "mdi:clock-outline", "orange"));
+    grid.appendChild(this._buildTile(this._config.print_time_left_entity, "mdi:clock-end", "orange"));
 
     sensorsWrap.appendChild(grid);
     wrap.appendChild(sensorsWrap);
@@ -450,19 +516,19 @@ class PrinterCardV2 extends HTMLElement {
     const stateObj = this._hass?.states[entityId];
     const attrName = stateObj?.attributes?.friendly_name || entityId;
     // Remove device prefix (everything before the last space or use the whole name)
-    const cleanName = attrName.includes(' ') 
-      ? attrName.split(' ').slice(1).join(' ') 
+    const cleanName = attrName.includes(' ')
+      ? attrName.split(' ').slice(1).join(' ')
       : attrName;
 
     const tile = document.createElement("hui-tile-card");
     tile.setConfig({
-      type:        "tile",
-      entity:      entityId,
-      name:        cleanName,
-      icon:        fallbackIcon,
-      color:       color,
+      type: "tile",
+      entity: entityId,
+      name: cleanName,
+      icon: fallbackIcon,
+      color: color,
       show_entity_picture: false,
-      tap_action:  { action: "more-info" },
+      tap_action: { action: "more-info" },
     });
 
     this._tiles[entityId] = tile;
@@ -482,10 +548,9 @@ class PrinterCardV2 extends HTMLElement {
       // Use hui-tile-card for current layer, overlay total as secondary
       const tile = document.createElement("hui-tile-card");
       tile.setConfig({
-        type:       "tile",
-        entity:     curId,
-        icon:       "mdi:layers-triple",
-        color:      "orange",
+        type: "tile",
+        entity: curId,
+        icon: "mdi:layers-triple",
         tap_action: { action: "more-info" },
       });
       this._tiles[curId] = tile;
@@ -540,11 +605,10 @@ class PrinterCardV2 extends HTMLElement {
     wrap.appendChild(l);
     const v = document.createElement("div");
     v.className = "t-value" + (accent ? " remaining" : "");
-    if (entityId) {
-      const badge = document.createElement("ha-state-label-badge");
-      badge.label = "";
-      this._tiles[entityId + "_time"] = badge;
-      v.appendChild(badge);
+    if (entityId && this._hass?.states[entityId]) {
+      const state = this._hass.states[entityId].state;
+      const unit = this._hass.states[entityId].attributes?.unit_of_measurement || "";
+      v.textContent = state !== "unavailable" && state !== "unknown" ? `${state} ${unit}`.trim() : "—";
     } else {
       v.textContent = "—";
     }
@@ -578,7 +642,7 @@ class PrinterCardV2 extends HTMLElement {
   // ── Actions ───────────────────────────────────────────────
   _doAction(action) {
     const c = this._config;
-    if (action === "power-on")  this._svc("homeassistant", "turn_on",  { entity_id: c.power_switch_entity });
+    if (action === "power-on") this._svc("homeassistant", "turn_on", { entity_id: c.power_switch_entity });
     if (action === "power-off") this._svc("homeassistant", "turn_off", { entity_id: c.power_switch_entity });
     if (action === "pause" && c.pause_button_entity) {
       const d = c.pause_button_entity.split(".")[0];
@@ -590,13 +654,15 @@ class PrinterCardV2 extends HTMLElement {
   getCardSize() { return 4; }
 
   // ── CSS ───────────────────────────────────────────────────
-  _css() { return `
+  _css() {
+    return `
     :host { display: block; }
     * { box-sizing: border-box; }
 
     ha-card.printer-card-v2 {
       overflow: hidden;
       border-radius: var(--ha-card-border-radius, 16px);
+      padding: 0;
     }
 
     /* ── UNAVAILABLE ─────────────────────────────────────── */
@@ -632,10 +698,23 @@ class PrinterCardV2 extends HTMLElement {
                     text-transform: uppercase; color: var(--secondary-text-color); }
 
     /* ── CAMERA ──────────────────────────────────────────── */
-    .camera-area  { position: relative; width: 100%; background: #111; line-height: 0; }
+    .camera-area  { 
+      position: relative; 
+      width: 100%; 
+      background: #111; 
+      line-height: 0;
+      margin: 0;
+      padding: 0;
+    }
     .camera-img   {
-      width: 100%; display: block; object-fit: cover;
-      aspect-ratio: 16/9; background: #111;
+      width: 100%; 
+      height: auto;
+      display: block; 
+      object-fit: cover;
+      aspect-ratio: 16/9; 
+      background: #111;
+      margin: 0;
+      padding: 0;
     }
     .printer-custom-img {
       object-fit: contain;
@@ -710,7 +789,19 @@ class PrinterCardV2 extends HTMLElement {
       --ha-card-background: rgba(255,109,0,.07);
       --ha-card-box-shadow: none;
       --ha-card-border-radius: 12px;
+      --primary-text-color: #ff6d00;
+      --secondary-text-color: #ff6d00;
+      --state-icon-color: #ff6d00;
+      --paper-item-icon-color: #ff6d00;
       margin: 0;
+    }
+    /* Force orange color for all tile-orange content */
+    .tile-orange hui-tile-card ha-icon,
+    .tile-orange hui-tile-card .icon,
+    .tile-orange hui-tile-card .state,
+    .tile-orange hui-tile-card .primary,
+    .tile-orange hui-tile-card .value {
+      color: #ff6d00 !important;
     }
     .tile-empty {
       height: 64px; display: flex; align-items: center; justify-content: center;
@@ -722,6 +813,28 @@ class PrinterCardV2 extends HTMLElement {
       font-size: .68rem; color: var(--secondary-text-color);
     }
     .layer-total-overlay ha-state-label-badge { --ha-label-badge-size: 20px; font-size: .65rem; }
+
+    /* Custom layer tile styling */
+    .layer-tile-content {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px; height: 64px;
+      background: rgba(255,109,0,.07); border-radius: 12px;
+    }
+    .layer-icon {
+      --mdc-icon-size: 24px;
+      color: #ff6d00;
+      flex-shrink: 0;
+    }
+    .layer-text {
+      flex: 1; min-width: 0;
+    }
+    .layer-label {
+      font-size: .7rem; color: var(--secondary-text-color);
+      text-transform: capitalize; margin-bottom: 2px;
+    }
+    .layer-value {
+      font-size: .95rem; font-weight: 600; color: #ff6d00;
+    }
 
     /* ── IDLE BOTTOM ─────────────────────────────────────── */
     .idle-bottom { padding: 12px 14px 14px; }
@@ -782,15 +895,16 @@ class PrinterCardV2 extends HTMLElement {
 
     .print-sensors  { padding: 10px 14px 14px; }
     .sensor-grid-2  { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  `; }
+  `;
+  }
 }
 
 customElements.define("printer-card-v2", PrinterCardV2);
 
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type:        "printer-card-v2",
-  name:        "3D Printer Card V2",
+  type: "printer-card-v2",
+  name: "3D Printer Card V2",
   description: "Dynamische 3D-Drucker Karte mit nativen HA-Komponenten",
-  preview:     true,
+  preview: true,
 });
