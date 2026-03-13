@@ -28,6 +28,7 @@ class PrinterCardV2Editor extends HTMLElement {
       { name: "print_time_left_entity", label: "Restlaufzeit Sensor", selector: { entity: { domain: "sensor" } } },
       { name: "current_layer_entity", label: "Aktueller Layer Sensor", selector: { entity: { domain: "sensor" } } },
       { name: "total_layers_entity", label: "Gesamt-Layer Sensor", selector: { entity: { domain: "sensor" } } },
+      { name: "eta_entity", label: "Fertigstellung (ETA) Sensor", selector: { entity: { domain: "sensor" } } },
       { name: "thumbnail_entity", label: "Modell-Vorschaubild (Sensor/Entity)", selector: { entity: {} } },
       { name: "job_name_entity", label: "Dateiname / Job-Name Sensor", selector: { entity: { domain: "sensor" } } },
 
@@ -177,9 +178,10 @@ class PrinterCardV2 extends HTMLElement {
     const timeValues = this.shadowRoot.querySelectorAll(".t-value");
     if (!timeValues.length) return;
 
-    // First t-value is ELAPSED, second is REMAINING
+    // First t-value is ELAPSED, second is REMAINING, third is ETA
     const elapsedEl = timeValues[0];
     const remainingEl = timeValues[1];
+    const etaEl = timeValues[2];
 
     if (elapsedEl) {
       const entityId = this._config.print_time_entity;
@@ -196,6 +198,15 @@ class PrinterCardV2 extends HTMLElement {
         const state = this._hass.states[entityId].state;
         const unit = this._hass.states[entityId].attributes?.unit_of_measurement || "";
         remainingEl.textContent = state !== "unavailable" && state !== "unknown" ? `${state} ${unit}`.trim() : "—";
+      }
+    }
+
+    if (etaEl) {
+      const entityId = this._config.eta_entity;
+      if (entityId && this._hass?.states[entityId]) {
+        const state = this._hass.states[entityId].state;
+        const unit = this._hass.states[entityId].attributes?.unit_of_measurement || "";
+        etaEl.textContent = state !== "unavailable" && state !== "unknown" ? `${state} ${unit}`.trim() : "—";
       }
     }
   }
@@ -464,6 +475,7 @@ class PrinterCardV2 extends HTMLElement {
     timeRow.className = "time-row";
     timeRow.appendChild(this._buildTimeCol("ELAPSED", this._config.print_time_entity, false));
     timeRow.appendChild(this._buildTimeCol("REMAINING", this._config.print_time_left_entity, true));
+    timeRow.appendChild(this._buildTimeCol("ETA", this._config.eta_entity, true));
     jobInfo.appendChild(timeRow);
     infoRow.appendChild(jobInfo);
     wrap.appendChild(infoRow);
@@ -494,6 +506,7 @@ class PrinterCardV2 extends HTMLElement {
     grid.appendChild(this._buildTile(this._config.nozzle_temp_entity, "mdi:printer-3d-nozzle-heat", "orange"));
     grid.appendChild(this._buildTile(this._config.print_time_entity, "mdi:clock-outline", "orange"));
     grid.appendChild(this._buildTile(this._config.print_time_left_entity, "mdi:clock-end", "orange"));
+    grid.appendChild(this._buildTile(this._config.eta_entity, "mdi:clock-check-outline", "orange"));
 
     sensorsWrap.appendChild(grid);
     wrap.appendChild(sensorsWrap);
