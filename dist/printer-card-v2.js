@@ -243,6 +243,11 @@ class PrinterCardV2 extends HTMLElement {
     const sr = this.shadowRoot;
     const status = this._lastStatus || this._status();
 
+    // Preserve lightbox state before clearing
+    const oldLb = sr.getElementById("lightbox");
+    const wasLbActive = oldLb && oldLb.classList.contains("active");
+    const lbImageSrc = oldLb?.querySelector("img")?.src;
+
     // Clear and rebuild
     sr.innerHTML = `<style>${this._css()}</style>`;
     const card = document.createElement("ha-card");
@@ -270,6 +275,13 @@ class PrinterCardV2 extends HTMLElement {
     }
 
     sr.appendChild(card);
+    
+    // Restore lightbox state
+    if (wasLbActive && lbImageSrc) {
+      lbImg.src = lbImageSrc;
+      lb.classList.add("active");
+    }
+    
     this._propagateHass();
   }
 
