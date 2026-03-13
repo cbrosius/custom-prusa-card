@@ -74,7 +74,9 @@ class PrinterCardV2Editor extends HTMLElement {
     this._formEl.computeLabel = (s) => s.label || s.name;
   }
 }
-customElements.define("printer-card-v2-editor", PrinterCardV2Editor);
+if (!customElements.get("printer-card-v2-editor")) {
+  customElements.define("printer-card-v2-editor", PrinterCardV2Editor);
+}
 
 
 // ─────────────────────────────────────────────────────────────
@@ -481,6 +483,11 @@ class PrinterCardV2 extends HTMLElement {
     // Thumbnail with click-to-zoom
     const thumbWrap = document.createElement("div");
     thumbWrap.className = "thumb-wrap";
+
+    const thumbId = this._config.thumbnail_entity;
+    const thumbUrl = thumbId ? (this._hass?.states[thumbId]?.state?.startsWith("http")
+      ? this._hass.states[thumbId].state
+      : this._hass?.states[thumbId]?.attributes?.entity_picture) : null;
     
     if (thumbUrl) {
       const img = document.createElement("img");
@@ -965,12 +972,16 @@ class PrinterCardV2 extends HTMLElement {
   }
 }
 
-customElements.define("printer-card-v2", PrinterCardV2);
+if (!customElements.get("printer-card-v2")) {
+  customElements.define("printer-card-v2", PrinterCardV2);
+}
 
 window.customCards = window.customCards || [];
-window.customCards.push({
-  type: "printer-card-v2",
-  name: "3D Printer Card V2",
-  description: "Dynamische 3D-Drucker Karte mit nativen HA-Komponenten",
-  preview: true,
-});
+if (!window.customCards.some(card => card.type === "printer-card-v2")) {
+  window.customCards.push({
+    type: "printer-card-v2",
+    name: "3D Printer Card V2",
+    description: "Dynamische 3D-Drucker Karte mit nativen HA-Komponenten",
+    preview: true,
+  });
+}
