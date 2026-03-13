@@ -1,7 +1,6 @@
 {
   "name": "Custom 3D Printer Card",
-  "content_in_root": false,
-  "filename": "printer-card-v2.js",
+  "content_in_root": true,
   "country": ["DE", "US", "GB"],
   "homeassistant": "2023.4.0",
   "render_readme": true
