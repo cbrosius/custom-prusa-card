@@ -176,37 +176,31 @@ class PrinterCardV2 extends HTMLElement {
 
   _updateTimeValues() {
     const timeValues = this.shadowRoot.querySelectorAll(".t-value");
-    if (!timeValues.length) return;
+    if (timeValues.length < 2) return;
 
-    // First t-value is ELAPSED, second is REMAINING, third is ETA
-    const elapsedEl = timeValues[0];
-    const remainingEl = timeValues[1];
-    const etaEl = timeValues[2];
-
-    if (elapsedEl) {
-      const entityId = this._config.print_time_entity;
-      if (entityId && this._hass?.states[entityId]) {
-        const state = this._hass.states[entityId].state;
-        const unit = this._hass.states[entityId].attributes?.unit_of_measurement || "";
-        elapsedEl.textContent = state !== "unavailable" && state !== "unknown" ? `${state} ${unit}`.trim() : "—";
-      }
+    // ELAPSED
+    const elapsedId = this._config.print_time_entity;
+    if (elapsedId && this._hass?.states[elapsedId]) {
+      const state = this._hass.states[elapsedId].state;
+      const unit = this._hass.states[elapsedId].attributes?.unit_of_measurement || "";
+      timeValues[0].textContent = state !== "unavailable" && state !== "unknown" ? `${state} ${unit}`.trim() : "—";
     }
 
-    if (remainingEl) {
-      const entityId = this._config.print_time_left_entity;
-      if (entityId && this._hass?.states[entityId]) {
-        const state = this._hass.states[entityId].state;
-        const unit = this._hass.states[entityId].attributes?.unit_of_measurement || "";
-        remainingEl.textContent = state !== "unavailable" && state !== "unknown" ? `${state} ${unit}`.trim() : "—";
-      }
+    // REMAINING
+    const remainingId = this._config.print_time_left_entity;
+    if (remainingId && this._hass?.states[remainingId]) {
+      const state = this._hass.states[remainingId].state;
+      const unit = this._hass.states[remainingId].attributes?.unit_of_measurement || "";
+      timeValues[1].textContent = state !== "unavailable" && state !== "unknown" ? `${state} ${unit}`.trim() : "—";
     }
 
-    if (etaEl) {
-      const entityId = this._config.eta_entity;
-      if (entityId && this._hass?.states[entityId]) {
-        const state = this._hass.states[entityId].state;
-        const unit = this._hass.states[entityId].attributes?.unit_of_measurement || "";
-        etaEl.textContent = state !== "unavailable" && state !== "unknown" ? `${state} ${unit}`.trim() : "—";
+    // ETA (if 3 elements exist)
+    if (timeValues.length >= 3) {
+      const etaId = this._config.eta_entity;
+      if (etaId && this._hass?.states[etaId]) {
+        const state = this._hass.states[etaId].state;
+        const unit = this._hass.states[etaId].attributes?.unit_of_measurement || "";
+        timeValues[2].textContent = state !== "unavailable" && state !== "unknown" ? `${state} ${unit}`.trim() : "—";
       }
     }
   }
@@ -902,10 +896,10 @@ class PrinterCardV2 extends HTMLElement {
     .job-name  { font-size: .9rem; font-weight: 700; white-space: nowrap;
                  overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; }
     .job-name-badge { --ha-label-badge-font-size: .9rem; }
-    .time-row  { display: flex; justify-content: space-between; }
-    .t-label   { font-size: .65rem; text-transform: uppercase; letter-spacing: .06em;
-                 color: var(--secondary-text-color); font-weight: 600; }
-    .t-value   { font-size: .88rem; font-weight: 600; margin-top: 1px; }
+    .time-row  { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 5px; }
+    .t-label   { font-size: .62rem; text-transform: uppercase; letter-spacing: .06em;
+                 color: var(--secondary-text-color); font-weight: 600; white-space: nowrap; }
+    .t-value   { font-size: .82rem; font-weight: 600; margin-top: 1px; white-space: nowrap; }
     .t-value.remaining { color: #ff6d00; }
     .t-value ha-state-label-badge { --ha-label-badge-font-size: .88rem; }
 
