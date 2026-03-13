@@ -230,16 +230,11 @@ class PrinterCardV2 extends HTMLElement {
     // Update Mushroom Template Card
     const mushroomTile = this.shadowRoot.querySelector("mushroom-template-card.mushroom-layer-tile");
     if (mushroomTile) {
+      // Set properties directly and via attributes to be sure
       if (mushroomTile.secondary !== display) {
         mushroomTile.secondary = display;
+        if (mushroomTile.requestUpdate) mushroomTile.requestUpdate();
       }
-      return;
-    }
-
-    // Fallback for custom HTML if layout hasn't cleared yet
-    const layerValueEl = this.shadowRoot.querySelector(".layer-value");
-    if (layerValueEl) {
-      layerValueEl.textContent = display;
     }
   }
 
@@ -898,11 +893,19 @@ class PrinterCardV2 extends HTMLElement {
     }
     .layer-total-overlay ha-state-label-badge { --ha-label-badge-size: 20px; font-size: .65rem; }
 
-    /* Mushroom Layer Tile tweaks */
+    /* Mushroom Layer Tile tweaks to match hui-tile-card */
     .mushroom-layer-tile {
       margin: 0;
       --ha-card-border-radius: 12px;
       --ha-card-box-shadow: none;
+      --ha-card-background: rgba(255,109,0,.07);
+      --mush-icon-size: 40px;
+      --mush-spacing: 12px;
+    }
+    .mushroom-layer-tile ha-card {
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
     }
 
     /* ── IDLE BOTTOM ─────────────────────────────────────── */
