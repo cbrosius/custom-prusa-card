@@ -795,7 +795,19 @@ class PrinterCardV2 extends HTMLElement {
       --ha-card-background: rgba(255,109,0,.07);
       --ha-card-box-shadow: none;
       --ha-card-border-radius: 12px;
+      --primary-text-color: #ff6d00;
+      --secondary-text-color: #ff6d00;
+      --state-icon-color: #ff6d00;
+      --paper-item-icon-color: #ff6d00;
       margin: 0;
+    }
+    /* Force orange color for all tile-orange content */
+    .tile-orange hui-tile-card ha-icon,
+    .tile-orange hui-tile-card .icon,
+    .tile-orange hui-tile-card .state,
+    .tile-orange hui-tile-card .primary,
+    .tile-orange hui-tile-card .value {
+      color: #ff6d00 !important;
     }
     .tile-empty {
       height: 64px; display: flex; align-items: center; justify-content: center;
