@@ -31,8 +31,6 @@ class PrinterCardV2Editor extends HTMLElement {
       { name: "eta_entity", label: "Fertigstellung (ETA) Sensor", selector: { entity: { domain: "sensor" } } },
       { name: "thumbnail_entity", label: "Modell-Vorschaubild (Sensor/Entity)", selector: { entity: {} } },
       { name: "job_name_entity", label: "Dateiname / Job-Name Sensor", selector: { entity: { domain: "sensor" } } },
-
-      { name: "pause_button_entity", label: "Pause-Entität", selector: { entity: { domain: ["button", "script", "input_button"] } } },
       {
         name: "printer_image",
         label: "Drucker-Bild",
@@ -414,7 +412,6 @@ class PrinterCardV2 extends HTMLElement {
 
     // Action button
     if (status === "printing") {
-      overlay.appendChild(this._makeIconButton("mdi:pause", "btn-cam-pause", "pause"));
     } else {
       overlay.appendChild(this._makeIconButton("mdi:power", "btn-cam-off", "power-off"));
     }
@@ -671,10 +668,6 @@ class PrinterCardV2 extends HTMLElement {
     const c = this._config;
     if (action === "power-on") this._svc("homeassistant", "turn_on", { entity_id: c.power_switch_entity });
     if (action === "power-off") this._svc("homeassistant", "turn_off", { entity_id: c.power_switch_entity });
-    if (action === "pause" && c.pause_button_entity) {
-      const d = c.pause_button_entity.split(".")[0];
-      this._svc(d, d === "button" ? "press" : "turn_on", { entity_id: c.pause_button_entity });
-    }
   }
   _svc(domain, service, data) { if (this._hass) this._hass.callService(domain, service, data); }
 
@@ -803,7 +796,6 @@ class PrinterCardV2 extends HTMLElement {
       border-radius: 50%;
     }
     .btn-power-on  { background: rgba(76,175,80,.15); color: #4caf50; }
-    .btn-cam-pause { background: rgba(28,28,28,.78); backdrop-filter: blur(12px); color: #fff; }
     .btn-cam-off   { background: rgba(244,67,54,.15); backdrop-filter: blur(12px); color: #f44336; }
 
     /* ── TILE WRAPPERS ───────────────────────────────────── */
