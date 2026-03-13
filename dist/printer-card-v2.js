@@ -131,7 +131,14 @@ class PrinterCardV2 extends HTMLElement {
     if (!token) return;
     const src = `/api/camera_proxy/${this._config.camera_entity}?token=${token}&t=${Date.now()}`;
     const pre = new Image();
-    pre.onload = () => { img.src = src; };
+    pre.onload = () => {
+      img.src = src;
+      // Update lightbox if active
+      const lb = this.shadowRoot.getElementById("lightbox");
+      if (lb && lb.classList.contains("active")) {
+        lb.querySelector("img").src = src;
+      }
+    };
     pre.src = src;
   }
 
@@ -231,6 +238,13 @@ class PrinterCardV2 extends HTMLElement {
     progressFill.style.width = pct + "%";
   }
 
+  _showLightbox(src) {
+    const lb = this.shadowRoot.getElementById("lightbox");
+    if (!lb) return;
+    lb.querySelector("img").src = src;
+    lb.classList.add("active");
+  }
+
   // ── Full structural render ────────────────────────────────
   _render() {
     if (!this._hass) return;
@@ -241,6 +255,15 @@ class PrinterCardV2 extends HTMLElement {
     sr.innerHTML = `<style>${this._css()}</style>`;
     const card = document.createElement("ha-card");
     card.className = "printer-card-v2";
+
+    // Lightbox for bigger image
+    const lb = document.createElement("div");
+    lb.id = "lightbox";
+    lb.className = "lightbox";
+    lb.onclick = () => lb.classList.remove("active");
+    const lbImg = document.createElement("img");
+    lb.appendChild(lbImg);
+    card.appendChild(lb);
 
     if (status === "unavailable") {
       card.appendChild(this._buildUnavail());
@@ -304,6 +327,10 @@ class PrinterCardV2 extends HTMLElement {
   _buildCameraArea(status) {
     const wrap = document.createElement("div");
     wrap.className = "camera-area";
+    wrap.onclick = () => {
+      const img = wrap.querySelector(".camera-img");
+      if (img) this._showLightbox(img.src);
+    };
 
     // Custom printer image (shown when no camera available)
     const customImg = this._config.printer_image;
@@ -714,6 +741,7 @@ class PrinterCardV2 extends HTMLElement {
       line-height: 0;
       margin: 0;
       padding: 0;
+      cursor: zoom-in;
     }
     .camera-img   {
       width: 100%; 
@@ -724,6 +752,18 @@ class PrinterCardV2 extends HTMLElement {
       background: #111;
       margin: 0;
       padding: 0;
+    }
+    .lightbox {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.92); z-index: 9999;
+      display: none; align-items: center; justify-content: center;
+      cursor: zoom-out;
+    }
+    .lightbox.active { display: flex; }
+    .lightbox img {
+      max-width: 95%; max-height: 95%; border-radius: 8px;
+      box-shadow: 0 0 50px rgba(0,0,0,0.8);
+      object-fit: contain;
     }
     .printer-custom-img {
       object-fit: contain;
