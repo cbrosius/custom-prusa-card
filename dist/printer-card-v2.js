@@ -681,9 +681,9 @@ class PrinterCardV2 extends HTMLElement {
       --mdc-icon-size: 20px;
       border-radius: 50%;
     }
-    .btn-power-on  { background: rgba(33,150,243,.15); color: #2196f3; }
+    .btn-power-on  { background: rgba(76,175,80,.15); color: #4caf50; }
     .btn-cam-pause { background: rgba(28,28,28,.78); backdrop-filter: blur(12px); color: #fff; }
-    .btn-cam-off   { background: rgba(255,255,255,.82); backdrop-filter: blur(12px); color: #1a1a1a; }
+    .btn-cam-off   { background: rgba(244,67,54,.15); backdrop-filter: blur(12px); color: #f44336; }
 
     /* ── TILE WRAPPERS ───────────────────────────────────── */
     /* Override hui-tile-card internals to match our color scheme */
