@@ -263,7 +263,7 @@ class PrinterCardV2 extends HTMLElement {
     lb.onclick = () => lb.classList.remove("active");
     const lbImg = document.createElement("img");
     lb.appendChild(lbImg);
-    card.appendChild(lb);
+    sr.appendChild(lb);
 
     if (status === "unavailable") {
       card.appendChild(this._buildUnavail());
@@ -468,25 +468,24 @@ class PrinterCardV2 extends HTMLElement {
     const infoRow = document.createElement("div");
     infoRow.className = "print-info-row";
 
-    // Thumbnail
-    const thumbId = this._config.thumbnail_entity;
-    const thumbUrl = thumbId ? (this._hass?.states[thumbId]?.state?.startsWith("http")
-      ? this._hass.states[thumbId].state
-      : this._hass?.states[thumbId]?.attributes?.entity_picture) : null;
-
+    // Thumbnail with click-to-zoom
+    const thumbWrap = document.createElement("div");
+    thumbWrap.className = "thumb-wrap";
+    
     if (thumbUrl) {
       const img = document.createElement("img");
       img.className = "thumb-sm";
       img.src = thumbUrl;
       img.alt = "Modell";
-      img.onclick = () => this._showLightbox(thumbUrl);
-      infoRow.appendChild(img);
+      thumbWrap.appendChild(img);
+      thumbWrap.onclick = () => this._showLightbox(thumbUrl);
     } else {
       const ph = document.createElement("div");
       ph.className = "thumb-sm-ph";
       ph.innerHTML = `<ha-icon icon="mdi:cube-outline"></ha-icon>`;
-      infoRow.appendChild(ph);
+      thumbWrap.appendChild(ph);
     }
+    infoRow.appendChild(thumbWrap);
 
     // Job info: job name + elapsed / remaining via native state labels
     const jobInfo = document.createElement("div");
@@ -939,14 +938,17 @@ class PrinterCardV2 extends HTMLElement {
     .print-info-row {
       display: flex; align-items: center; gap: 12px; padding: 12px 14px 0;
     }
+    .thumb-wrap {
+      width: 54px; height: 54px; border-radius: 8px;
+      overflow: hidden; flex-shrink: 0; cursor: zoom-in;
+      background: var(--secondary-background-color);
+    }
     .thumb-sm {
-      width: 54px; height: 54px; border-radius: 8px; object-fit: cover;
-      background: var(--secondary-background-color); flex-shrink: 0;
-      cursor: zoom-in;
+      width: 100%; height: 100%; object-fit: cover;
+      display: block;
     }
     .thumb-sm-ph {
-      width: 54px; height: 54px; border-radius: 8px; flex-shrink: 0;
-      background: var(--secondary-background-color);
+      width: 100%; height: 100%;
       display: flex; align-items: center; justify-content: center;
     }
     .thumb-sm-ph ha-icon { --mdc-icon-size: 26px; color: var(--secondary-text-color); }
