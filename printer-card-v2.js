@@ -222,7 +222,10 @@ class PrinterCardV2 extends HTMLElement {
       // If custom image is selected from the dropdown, use the local image file
       const img = document.createElement("img");
       img.className = "camera-img printer-custom-img";
-      img.src = `/local/custom-prusa-card/images/${customImg}`;
+      // Use relative path from /local/ - works regardless of folder name
+      const scriptPath = new URL(import.meta.url).pathname;
+      const basePath = scriptPath.substring(0, scriptPath.lastIndexOf('/'));
+      img.src = `${basePath}/images/${customImg}`;
       img.alt = "Drucker";
       wrap.appendChild(img);
     } else if (this._config.printer_image_entity && this._hass) {
