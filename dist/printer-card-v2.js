@@ -246,10 +246,12 @@ class PrinterCardV2 extends HTMLElement {
       card.appendChild(this._buildUnavail());
     } else if (status === "idle") {
       card.appendChild(this._buildCameraArea(status));
-      card.appendChild(this._buildIdleBottom());
+      const bottom = this._buildIdleBottom();
+      if (bottom) card.appendChild(bottom);
     } else {
       card.appendChild(this._buildCameraArea(status));
-      card.appendChild(this._buildPrintingBottom());
+      const bottom = this._buildPrintingBottom();
+      if (bottom) card.appendChild(bottom);
     }
 
     sr.appendChild(card);
@@ -416,11 +418,19 @@ class PrinterCardV2 extends HTMLElement {
 
     const tempRow = document.createElement("div");
     tempRow.className = "temp-row";
-    tempRow.appendChild(this._buildTile(this._config.bed_temp_entity, "mdi:thermometer", "blue"));
-    tempRow.appendChild(this._buildTile(this._config.nozzle_temp_entity, "mdi:printer-3d-nozzle-heat", "blue"));
-    wrap.appendChild(tempRow);
+    
+    const bedTile = this._buildTile(this._config.bed_temp_entity, "mdi:thermometer", "blue");
+    const nozzleTile = this._buildTile(this._config.nozzle_temp_entity, "mdi:printer-3d-nozzle-heat", "blue");
+    
+    if (bedTile) tempRow.appendChild(bedTile);
+    if (nozzleTile) tempRow.appendChild(nozzleTile);
+    
+    if (tempRow.children.length > 0) {
+      wrap.appendChild(tempRow);
+      return wrap;
+    }
 
-    return wrap;
+    return null;
   }
 
   // ── Build: Printing bottom ────────────────────────────────
@@ -493,17 +503,25 @@ class PrinterCardV2 extends HTMLElement {
     const grid = document.createElement("div");
     grid.className = "sensor-grid-2";
 
-    // Layer: combine current + total manually since it's two entities
-    grid.appendChild(this._buildLayerTile());
-    grid.appendChild(this._buildTile(this._config.print_progress_entity, "mdi:percent", "orange"));
-    grid.appendChild(this._buildTile(this._config.bed_temp_entity, "mdi:radiator", "orange"));
-    grid.appendChild(this._buildTile(this._config.nozzle_temp_entity, "mdi:printer-3d-nozzle-heat", "orange"));
-    grid.appendChild(this._buildTile(this._config.print_time_entity, "mdi:clock-outline", "orange"));
-    grid.appendChild(this._buildTile(this._config.print_time_left_entity, "mdi:clock-end", "orange"));
-    grid.appendChild(this._buildTile(this._config.eta_entity, "mdi:clock-check-outline", "orange"));
 
-    sensorsWrap.appendChild(grid);
-    wrap.appendChild(sensorsWrap);
+    const tiles = [
+      this._buildLayerTile(),
+      this._buildTile(this._config.print_progress_entity, "mdi:percent", "orange"),
+      this._buildTile(this._config.bed_temp_entity, "mdi:radiator", "orange"),
+      this._buildTile(this._config.nozzle_temp_entity, "mdi:printer-3d-nozzle-heat", "orange"),
+      this._buildTile(this._config.print_time_entity, "mdi:clock-outline", "orange"),
+      this._buildTile(this._config.print_time_left_entity, "mdi:clock-end", "orange"),
+      this._buildTile(this._config.eta_entity, "mdi:clock-check-outline", "orange")
+    ];
+
+    tiles.forEach(tile => {
+      if (tile) grid.appendChild(tile);
+    });
+
+    if (grid.children.length > 0) {
+      sensorsWrap.appendChild(grid);
+      wrap.appendChild(sensorsWrap);
+    }
 
     return wrap;
   }
@@ -511,13 +529,10 @@ class PrinterCardV2 extends HTMLElement {
   // ── Native hui-tile-card factory ─────────────────────────
   // hui-tile-card renders the entity's icon, name, state + unit natively
   _buildTile(entityId, fallbackIcon, color) {
+    if (!entityId) return null;
+
     const wrapper = document.createElement("div");
     wrapper.className = `tile-wrap tile-${color}`;
-
-    if (!entityId) {
-      wrapper.innerHTML = `<div class="tile-empty">—</div>`;
-      return wrapper;
-    }
 
     // Extract a clean name from the entity attributes
     const stateObj = this._hass?.states[entityId];
@@ -545,14 +560,11 @@ class PrinterCardV2 extends HTMLElement {
 
   // Layer tile: two entities combined into one display
   _buildLayerTile() {
+    const curId = this._config.current_layer_entity;
+    if (!curId) return null;
+
     const wrapper = document.createElement("div");
     wrapper.className = "tile-wrap tile-orange";
-
-    const curId = this._config.current_layer_entity;
-    if (!curId) {
-      wrapper.innerHTML = `<div class="tile-empty">—</div>`;
-      return wrapper;
-    }
 
     const content = document.createElement("div");
     content.className = "layer-tile-content";
@@ -801,20 +813,24 @@ class PrinterCardV2 extends HTMLElement {
       --rgb-tile-color: 255, 109, 0;
     }
     /* Force colors for all tile content */
-    .tile-orange hui-tile-card .primary {
+    .tile-orange hui-tile-card .primary,
+    .tile-orange hui-tile-card ha-tile-info .primary {
       color: white !important;
     }
     .tile-orange hui-tile-card .state,
     .tile-orange hui-tile-card .value,
-    .tile-orange hui-tile-card .secondary {
+    .tile-orange hui-tile-card .secondary,
+    .tile-orange hui-tile-card ha-tile-info .secondary {
       color: #ff6d00 !important;
     }
-    .tile-blue hui-tile-card .primary {
+    .tile-blue hui-tile-card .primary,
+    .tile-blue hui-tile-card ha-tile-info .primary {
       color: white !important;
     }
     .tile-blue hui-tile-card .state,
     .tile-blue hui-tile-card .value,
-    .tile-blue hui-tile-card .secondary {
+    .tile-blue hui-tile-card .secondary,
+    .tile-blue hui-tile-card ha-tile-info .secondary {
       color: #2196f3 !important;
     }
     .tile-empty {
