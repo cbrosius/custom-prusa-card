@@ -446,10 +446,19 @@ class PrinterCardV2 extends HTMLElement {
       return wrapper;
     }
 
+    // Extract a clean name from the entity attributes
+    const stateObj = this._hass?.states[entityId];
+    const attrName = stateObj?.attributes?.friendly_name || entityId;
+    // Remove device prefix (everything before the last space or use the whole name)
+    const cleanName = attrName.includes(' ') 
+      ? attrName.split(' ').slice(1).join(' ') 
+      : attrName;
+
     const tile = document.createElement("hui-tile-card");
     tile.setConfig({
       type:        "tile",
       entity:      entityId,
+      name:        cleanName,
       icon:        fallbackIcon,
       show_entity_picture: false,
       tap_action:  { action: "more-info" },
