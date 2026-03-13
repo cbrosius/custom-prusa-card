@@ -50,13 +50,13 @@ Eine Home Assistant Custom Card für 3D-Drucker mit Mushroom Design.
 ### Manuelle Installation
 
 1. Lade die Dateien aus dem `dist`-Ordner herunter
-2. Kopiere sie in das Verzeichnis `config/www/community/custom-prusa-card/`
+2. Kopiere sie in das Verzeichnis `config/www/community/custom-printer-card/`
 3. Füge folgende Ressourcen in deine Lovelace-Dashboard-Konfiguration ein:
 
 ```yaml
 resources:
   - type: module
-    url: /hacsfiles/custom-prusa-card/printer-card-v2.js
+    url: /hacsfiles/custom-printer-card/printer-card-v2.js
 ```
 
 ## Konfiguration
@@ -64,69 +64,57 @@ resources:
 ### GUI-Konfiguration (Empfohlen)
 
 1. Füge eine neue Card zu deinem Dashboard hinzu
-2. Suche nach "Prusa 3D Printer Card"
-3. Wähle dein PrusaLink-Device aus
-4. Die Card erkennt automatisch alle verfügbaren Entitäten
-5. Passe die Anzeige-Einstellungen nach Bedarf an
+2. Suche nach "3D Printer Card"
+3. Wähle deine Drucker-Entitäten aus
+4. Passe die Anzeige-Einstellungen nach Bedarf an
 
 ### YAML-Konfiguration
 
 ```yaml
-type: custom:prusa-card
+type: custom:printer-card-v2
 name: Mein 3D Drucker
-icon: mdi:printer-3d
-device: <device_id>
-# Oder manuelle Entitätszuweisung:
-camera: camera.prusa_mk4
-power_switch: switch.prusa_power
-bed_temp_sensor: sensor.prusa_bed_temperature
-nozzle_temp_sensor: sensor.prusa_tool0_temperature
-progress_sensor: sensor.prusa_progress
-show_preview: true
+printer_status_entity: sensor.printer_status
+camera_entity: camera.printer_camera
+power_switch_entity: switch.printer_power
+bed_temp_entity: sensor.bed_temperature
+nozzle_temp_entity: sensor.nozzle_temperature
+print_progress_entity: sensor.print_progress
+print_time_entity: sensor.print_time_elapsed
+print_time_left_entity: sensor.print_time_remaining
+current_layer_entity: sensor.current_layer
+total_layers_entity: sensor.total_layers
+thumbnail_entity: sensor.print_thumbnail
+job_name_entity: sensor.job_name
+printer_image: "A1Mini.jpg"
+show_printer_image_when_off: true
 ```
 
 ### Konfigurationsoptionen
 
 | Option | Typ | Beschreibung | Standard |
 |--------|-----|--------------|----------|
-| `name` | string | Anzeigename des Druckers | "Prusa Printer" |
-| `icon` | string | Icon für den Drucker | `mdi:printer-3d` |
-| `device` | string | PrusaLink Device ID | - |
-| `camera` | string | Kamera-Entität | Automatisch |
-| `power_switch` | string | Power-Schalter Entität | Automatisch |
-| `bed_temp_sensor` | string | Druckbett-Temperatur Sensor | Automatisch |
-| `nozzle_temp_sensor` | string | Nozzle-Temperatur Sensor | Automatisch |
-| `progress_sensor` | string | Fortschritt Sensor | Automatisch |
-| `time_elapsed_sensor` | string | Laufzeit Sensor | Automatisch |
-| `time_remaining_sensor` | string | Restlaufzeit Sensor | Automatisch |
-| `current_layer_sensor` | string | Aktueller Layer Sensor | Automatisch |
-| `total_layers_sensor` | string | Gesamtlayers Sensor | Automatisch |
-| `fan_speed_sensor` | string | Lüftergeschwindigkeit Sensor | Automatisch |
-| `show_preview` | boolean | Druckvorschau anzeigen | true |
+| `name` | string | Anzeigename des Druckers | "3D Drucker" |
+| `printer_status_entity` | string | Status-Sensor des Druckers | - |
+| `camera_entity` | string | Kamera-Entität | - |
+| `power_switch_entity` | string | Power-Schalter Entität | - |
+| `bed_temp_entity` | string | Druckbett-Temperatur Sensor | - |
+| `nozzle_temp_entity` | string | Nozzle-Temperatur Sensor | - |
+| `print_progress_entity` | string | Druckfortschritt Sensor (%) | - |
+| `print_time_entity` | string | Bisherige Druckzeit Sensor | - |
+| `print_time_left_entity` | string | Restlaufzeit Sensor | - |
+| `current_layer_entity` | string | Aktueller Layer Sensor | - |
+| `total_layers_entity` | string | Gesamtlayers Sensor | - |
+| `thumbnail_entity` | string | Modell-Vorschaubild Sensor | - |
+| `job_name_entity` | string | Dateiname / Job-Name Sensor | - |
+| `printer_image` | string | Drucker-Bild (Dropdown oder Custom Upload) | "" |
+| `show_printer_image_when_off` | boolean | Zeige Drucker-Bild wenn ausgeschaltet | false |
 
 ## Voraussetzungen
 
 - Home Assistant 2023.4.0 oder höher
-- PrusaLink Integration in Home Assistant eingerichtet
+- Drucker-Integration in Home Assistant eingerichtet (z.B. PrusaLink, OctoPrint, Bambu Lab, etc.)
 - Optional: Eine Kamera, die den Drucker überwacht
 - Optional: Ein Schalter zur Steuerung der Spannungsversorgung
-
-## Automatische Entitätserkennung
-
-Die Card erkennt automatisch folgende PrusaLink-Entitäten basierend auf ihren Namen:
-
-| Entitätstyp | Erkannte Muster |
-|-------------|-----------------|
-| Kamera | `camera.*`, `*camera*` |
-| Power-Schalter | `switch.*power*`, `switch.*relay*` |
-| Druckbett-Temp | `sensor.*bed*temp*`, `sensor.*heater_bed*` |
-| Nozzle-Temp | `sensor.*tool*temp*`, `sensor.*nozzle*temp*`, `sensor.*hotend*temp*` |
-| Fortschritt | `sensor.*progress*`, `sensor.*%*` |
-| Restlaufzeit | `sensor.*time*remaining*`, `sensor.*time_left*` |
-| Laufzeit | `sensor.*time*elapsed*`, `sensor.*time_printing*` |
-| Aktueller Layer | `sensor.*layer*` (ohne total/count) |
-| Gesamtlayers | `sensor.*layer*total*`, `sensor.*layers*` |
-| Lüfter | `sensor.*fan*` |
 
 
 ## Mitwirken
