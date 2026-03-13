@@ -42,7 +42,8 @@ class PrinterCardV2Editor extends HTMLElement {
               { label: "Prusa Mini", value: "PrusaMini.jpg" },
               { label: "A1 Mini", value: "A1Mini.jpg" },
               { label: "Custom Upload", value: "custom" },              
-            ]
+            ],
+            mode: "dropdown"
           }
         }
       },
@@ -69,16 +70,22 @@ class PrinterCardV2Editor extends HTMLElement {
 
   _render() {
     if (!this._hass || !customElements.get("ha-form")) return;
-    if (!this._formEl) {
-      this._formEl = document.createElement("ha-form");
-      this._formEl.addEventListener("value-changed", (e) => {
-        this._config = e.detail.value;
-        // Re-render to update schema dynamically
-        this._render();
-        this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: this._config } }));
-      });
-      this.appendChild(this._formEl);
+    
+    // Always recreate the form to ensure schema updates are reflected
+    if (this._formEl) {
+      this._formEl.remove();
+      this._formEl = null;
     }
+    
+    this._formEl = document.createElement("ha-form");
+    this._formEl.addEventListener("value-changed", (e) => {
+      this._config = e.detail.value;
+      // Re-render to update schema dynamically
+      this._render();
+      this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: this._config } }));
+    });
+    this.appendChild(this._formEl);
+    
     this._formEl.hass = this._hass;
     this._formEl.data = this._config;
     this._formEl.schema = this._schema();
