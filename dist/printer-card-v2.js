@@ -41,7 +41,7 @@ class PrinterCardV2Editor extends HTMLElement {
               { label: "Prusa Core XY", value: "PrusaCoreOne.jpg" },
               { label: "Prusa Mini", value: "PrusaMini.jpg" },
               { label: "A1 Mini", value: "A1Mini.jpg" },
-              { label: "Custom Upload", value: "custom" },              
+              { label: "Custom Upload", value: "custom" },
             ],
             mode: "dropdown"
           }
@@ -74,10 +74,15 @@ class PrinterCardV2Editor extends HTMLElement {
       this._formEl = document.createElement("ha-form");
       this._formEl.addEventListener("value-changed", (e) => {
         this._config = e.detail.value;
-        // Update schema and data to trigger re-render
-        this._formEl.schema = this._schema();
-        this._formEl.data = { ...this._config };
         this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: this._config } }));
+        // Defer schema + data update by one microtask so ha-form finishes
+        // processing the current event before receiving a new schema.
+        // Without this, selecting "Custom Upload" never shows the upload field
+        // because ha-form ignores schema changes mid-event.
+        Promise.resolve().then(() => {
+          this._formEl.schema = this._schema();
+          this._formEl.data = { ...this._config };
+        });
       });
       this.appendChild(this._formEl);
     }
@@ -164,19 +169,19 @@ class PrinterCardV2 extends HTMLElement {
   // ── Image resolution helper ─────────────────────────────
   _getPrinterImage() {
     const model = this._config.printer_image || "";
-    
+
     if (model === "custom") {
       // Return the user's uploaded image, with fallback
-      return this._config.custom_image || "/hacsfiles/custom-prusa-card/default-printer.png";
+      return this._config.custom_image || "/hacsfiles/custom-printer-card/default-printer.png";
     }
-    
+
     if (model) {
       // Return bundled image based on dropdown selection
       const scriptPath = new URL(import.meta.url).pathname;
       const basePath = scriptPath.substring(0, scriptPath.lastIndexOf('/'));
       return `${basePath}/images/${model}`;
     }
-    
+
     return null;
   }
 
@@ -312,7 +317,7 @@ class PrinterCardV2 extends HTMLElement {
       const bottom = this._buildPrintingBottom();
       if (bottom) card.appendChild(bottom);
     }
-    
+
     this._propagateHass();
   }
 
@@ -474,13 +479,13 @@ class PrinterCardV2 extends HTMLElement {
 
     const tempRow = document.createElement("div");
     tempRow.className = "temp-row";
-    
+
     const bedTile = this._buildTile(this._config.bed_temp_entity, "mdi:thermometer", "blue");
     const nozzleTile = this._buildTile(this._config.nozzle_temp_entity, "mdi:printer-3d-nozzle-heat", "blue");
-    
+
     if (bedTile) tempRow.appendChild(bedTile);
     if (nozzleTile) tempRow.appendChild(nozzleTile);
-    
+
     if (tempRow.children.length > 0) {
       wrap.appendChild(tempRow);
       return wrap;
@@ -505,7 +510,7 @@ class PrinterCardV2 extends HTMLElement {
     const thumbUrl = thumbId ? (this._hass?.states[thumbId]?.state?.startsWith("http")
       ? this._hass.states[thumbId].state
       : this._hass?.states[thumbId]?.attributes?.entity_picture) : null;
-    
+
     if (thumbUrl) {
       const img = document.createElement("img");
       img.className = "thumb-sm";
@@ -644,7 +649,7 @@ class PrinterCardV2 extends HTMLElement {
       tap_action: { action: "more-info" },
       entity: curId
     });
-    
+
     return tile;
   }
 
