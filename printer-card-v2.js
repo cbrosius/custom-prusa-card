@@ -33,7 +33,7 @@ class PrinterCardV2Editor extends HTMLElement {
       { name: "filament_entity",        label: "Filament-Sensor (idle)",              selector: { entity: { domain: "sensor" } } },
       { name: "last_job_entity",        label: "Letzter Job Sensor (idle)",           selector: { entity: { domain: "sensor" } } },
       { name: "pause_button_entity",    label: "Pause-Entität",                       selector: { entity: { domain: ["button","script","input_button"] } } },
-      { name: "printer_image_entity",   label: "Eigenes Bild (falls keine Kamera)",   selector: { entity: { domain: "image"  } } },
+      { name: "printer_image_entity",   label: "Eigenes Bild (falls keine Kamera)",   selector: { media: {} } },
     ];
   }
 
@@ -196,10 +196,21 @@ class PrinterCardV2 extends HTMLElement {
 
     // Custom printer image (shown when no camera available)
     const customImgId = this._config.printer_image_entity;
+    let showLiveBadge = false;
+    
     if (customImgId && this._hass) {
-      const customImgUrl = this._hass?.states[customImgId]?.state?.startsWith("http")
-        ? this._hass.states[customImgId].state
-        : this._hass?.states[customImgId]?.attributes?.entity_picture;
+      let customImgUrl = null;
+      
+      // Check if it's a media entity (from media picker)
+      if (customImgId.startsWith("media-source://")) {
+        // For media picker, use the entity_id directly as the URL
+        customImgUrl = customImgId;
+      } else if (this._hass.states[customImgId]) {
+        // For image entity
+        customImgUrl = this._hass?.states[customImgId]?.state?.startsWith("http")
+          ? this._hass.states[customImgId].state
+          : this._hass?.states[customImgId]?.attributes?.entity_picture;
+      }
       
       if (customImgUrl) {
         const img = document.createElement("img");
@@ -258,11 +269,15 @@ class PrinterCardV2 extends HTMLElement {
 
     wrap.appendChild(overlay);
 
-    // Live badge
-    const live = document.createElement("div");
-    live.className = "live-badge";
-    live.innerHTML = `<div class="live-dot"></div>LIVE`;
-    wrap.appendChild(live);
+    // Live badge - only show when camera feed is available
+    const hasCamera = this._config.camera_entity && this._hass && 
+      this._hass.states[this._config.camera_entity]?.attributes?.access_token;
+    if (hasCamera) {
+      const live = document.createElement("div");
+      live.className = "live-badge";
+      live.innerHTML = `<div class="live-dot"></div>LIVE`;
+      wrap.appendChild(live);
+    }
 
     return wrap;
   }
