@@ -585,9 +585,10 @@ class PrinterCardV2 extends HTMLElement {
 
     const totId = this._config.total_layers_entity;
     // Use official Home Assistant Jinja templates for reliable updates
-    let secondary = `{{ states('${curId}') }}`;
+    // Handle unavailable/unknown states by showing "—" instead
+    let secondary = `{% set cur = states('${curId}') %}{% if cur not in ['unavailable', 'unknown', 'none'] %}{{ cur }}{% else %}—{% endif %}`;
     if (totId) {
-      secondary = `{{ states('${curId}') }} / {{ states('${totId}') }}`;
+      secondary = `{% set cur = states('${curId}') %}{% set tot = states('${totId}') %}{% if cur not in ['unavailable', 'unknown', 'none'] and tot not in ['unavailable', 'unknown', 'none'] %}{{ cur }} / {{ tot }}{% else %}—{% endif %}`;
     }
 
     const tile = document.createElement("mushroom-template-card");
