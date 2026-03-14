@@ -438,7 +438,14 @@ class PrinterCardV2 extends HTMLElement {
 
     const timeRow = document.createElement("div");
     timeRow.className = "time-row";
-    timeRow.appendChild(this._buildTimeCol("ELAPSED", this._config.print_time_entity, false));
+    const elapsedId = this._config.print_time_entity;
+    const elapsedAvail = elapsedId && this._hass?.states[elapsedId] && !["unavailable", "unknown"].includes(this._hass.states[elapsedId].state);
+    if (elapsedAvail) {
+      timeRow.appendChild(this._buildTimeCol("ELAPSED", elapsedId, false));
+    } else {
+      const layerInfo = this._getLayerInfo();
+      timeRow.appendChild(this._buildTimeCol("LAYER", null, false, layerInfo));
+    }
     timeRow.appendChild(this._buildTimeCol("REMAINING", this._config.print_time_left_entity, true));
     timeRow.appendChild(this._buildTimeCol("ETA", this._config.eta_entity, true));
     jobInfo.appendChild(timeRow);
@@ -556,7 +563,7 @@ class PrinterCardV2 extends HTMLElement {
   }
 
   // ── Time column ───────────────────────────────────────────
-  _buildTimeCol(label, entityId, accent) {
+  _buildTimeCol(label, entityId, accent, fallbackValue) {
     const wrap = document.createElement("div");
     wrap.style.textAlign = accent ? "right" : "left";
     const l = document.createElement("div"); l.className = "t-label"; l.textContent = label;
@@ -567,9 +574,24 @@ class PrinterCardV2 extends HTMLElement {
       const state = this._hass.states[entityId].state;
       const unit = this._hass.states[entityId].attributes?.unit_of_measurement || "";
       v.textContent = (state !== "unavailable" && state !== "unknown") ? `${state} ${unit}`.trim() : "—";
+    } else if (fallbackValue !== undefined) {
+      v.textContent = fallbackValue;
     } else { v.textContent = "—"; }
     wrap.appendChild(v);
     return wrap;
+  }
+
+  // ── Layer info helper ─────────────────────────────────────
+  _getLayerInfo() {
+    const curId = this._config.current_layer_entity;
+    const totId = this._config.total_layers_entity;
+    if (!curId || !this._hass?.states[curId]) return "—";
+    const cur = this._hass.states[curId].state;
+    if (cur === "unavailable" || cur === "unknown") return "—";
+    if (!totId || !this._hass?.states[totId]) return cur;
+    const tot = this._hass.states[totId].state;
+    if (tot === "unavailable" || tot === "unknown") return cur;
+    return `${cur} / ${tot}`;
   }
 
   // ── ha-icon-button factory ────────────────────────────────
