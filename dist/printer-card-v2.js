@@ -293,12 +293,14 @@ class PrinterCardV2 extends HTMLElement {
     const realStatus = (statusEntity && this._hass?.states[statusEntity]) ? this._hass.states[statusEntity].state : (status === "printing" ? "Printing" : "Idle");
     const text = document.createElement("div");
     text.innerHTML = `<div class="unavail-name">${this._config.name || "3D-Drucker"}</div><div class="unavail-sub">${realStatus}</div>`;
-    const powerWrap = document.createElement("div");
-    powerWrap.className = "power-wrap";
-    powerWrap.innerHTML = `<span class="power-label">POWER</span>`;
-    if (status !== "printing") powerWrap.appendChild(this._makeIconButton("mdi:power", "btn-power-on", "power-on"));
+    if (status !== "printing") {
+      const powerWrap = document.createElement("div");
+      powerWrap.className = "power-wrap";
+      powerWrap.innerHTML = `<span class="power-label">POWER</span>`;
+      powerWrap.appendChild(this._makeIconButton("mdi:power", "btn-power-on", "power-on"));
+      wrap.appendChild(powerWrap);
+    }
     wrap.appendChild(text);
-    wrap.appendChild(powerWrap);
     return wrap;
   }
 
