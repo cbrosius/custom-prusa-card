@@ -558,7 +558,7 @@ class PrinterCardV2 extends HTMLElement {
       border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
     .unavail-printer-image {
-      width: 60px; height: 60px; flex-shrink: 0;
+      width: 54px; height: 54px; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
       background: var(--secondary-background-color, #f5f5f5); border-radius: 8px; overflow: hidden;
     }
