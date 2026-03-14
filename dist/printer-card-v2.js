@@ -153,18 +153,11 @@ class PrinterCardV2 extends HTMLElement {
   _propagateHass() {
     if (!this.shadowRoot) return;
     this.shadowRoot.querySelectorAll(
-      "hui-tile-card, ha-icon-button, ha-state-label-badge, mushroom-template-card"
+      "hui-tile-card, hui-sensor-card, ha-icon-button, ha-state-label-badge, mushroom-template-card"
     ).forEach(el => { if (el.hass !== this._hass) el.hass = this._hass; });
     this._updateJobName();
     this._updateTimeValues();
     this._updateProgressBar();
-  }
-
-  _updateJobName() {
-    const el = this.shadowRoot.querySelector(".job-name");
-    if (!el) return;
-    const id = this._config.job_name_entity;
-    el.textContent = (id && this._hass?.states[id]) ? (this._hass.states[id].state || "—") : "—";
   }
 
   _updateTimeValues() {
@@ -511,8 +504,16 @@ class PrinterCardV2 extends HTMLElement {
     if (!entityId) return null;
     const wrapper = document.createElement("div");
     wrapper.className = `sensor-card-wrap sensor-${color}`;
-    const card = document.createElement("sensor-card");
-    card.setConfig({ entity: entityId, icon: icon, graph: "line", hours_to_show: 1, tap_action: { action: "more-info" } });
+    const card = document.createElement("hui-sensor-card");   // ← was "sensor-card"
+    card.setConfig({
+      type: "sensor",                                          // ← added
+      entity: entityId,
+      icon: icon,
+      graph: "line",
+      hours_to_show: 1,
+      tap_action: { action: "more-info" }
+    });
+    if (this._hass) card.hass = this._hass;                   // ← added
     this._tiles[entityId] = card;
     wrapper.appendChild(card);
     return wrapper;
