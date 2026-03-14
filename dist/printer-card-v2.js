@@ -5,6 +5,11 @@
  *   - ha-icon-button     → all action buttons
  *   - ha-state-label     → status text
  *   - ha-circular-progress → print progress
+ *
+ * Camera: live-streams via /api/camera_proxy_stream (MJPEG multipart),
+ *         falls back to HLS <video> if the MJPEG stream URL contains "hls",
+ *         and finally falls back to the 5-second snapshot poller if the
+ *         stream endpoint is unavailable.
  */
 
 // ─────────────────────────────────────────────────────────────
@@ -47,8 +52,7 @@ class PrinterCardV2Editor extends HTMLElement {
   }
 
   _schema() {
-    const schema = [...this._baseSchema()];
-    return schema;
+    return [...this._baseSchema()];
   }
 
   _render() {
@@ -58,12 +62,6 @@ class PrinterCardV2Editor extends HTMLElement {
       this._formEl.addEventListener("value-changed", (e) => {
         this._config = e.detail.value;
         this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: this._config } }));
-        // Defer schema + data update to the next macrotask (setTimeout) so
-        // ha-form fully completes its own internal rendering/update cycle
-        // before receiving the new schema.  A microtask (Promise.resolve)
-        // fires too early — ha-form is still processing its own lit-element
-        // update queue at that point and silently drops the schema change,
-        // which is why selecting "Custom Upload" never showed the upload field.
         setTimeout(() => {
           this._formEl.schema = this._schema();
           this._formEl.data = { ...this._config };
@@ -92,9 +90,11 @@ class PrinterCardV2 extends HTMLElement {
     this._config = {};
     this._hass = null;
     this._lastStatus = null;
-    this._camInterval = null;
     // Reusable native tile elements, keyed by entity role
     this._tiles = {};
+    // Track whether we are using the MJPEG stream or fell back to polling
+    this._streamMode = "mjpeg"; // "mjpeg" | "hls" | "poll"
+    this._pollInterval = null;
   }
 
   static getConfigElement() { return document.createElement("printer-card-v2-editor"); }
@@ -104,8 +104,9 @@ class PrinterCardV2 extends HTMLElement {
 
   setConfig(config) {
     this._config = config;
-    this._lastStatus = null; // force structural rebuild
+    this._lastStatus = null;
     this._tiles = {};
+    this._stopPoll();
     this._render();
   }
 
@@ -116,20 +117,31 @@ class PrinterCardV2 extends HTMLElement {
       this._lastStatus = status;
       this._render();
     } else {
-      // Just forward hass to all live native child elements — they update themselves
       this._propagateHass();
     }
   }
 
   connectedCallback() {
-    this._camInterval = setInterval(() => this._refreshCamera(), 5000);
-  }
-  disconnectedCallback() {
-    clearInterval(this._camInterval);
+    // Polling is only started on-demand when MJPEG/HLS both fail
   }
 
-  // ── Camera refresh (flicker-free preload) ────────────────
-  _refreshCamera() {
+  disconnectedCallback() {
+    this._stopPoll();
+  }
+
+  // ── Polling fallback (only used when stream fails) ────────
+  _startPoll() {
+    if (this._pollInterval) return;
+    this._pollInterval = setInterval(() => this._pollSnapshot(), 5000);
+  }
+  _stopPoll() {
+    if (this._pollInterval) {
+      clearInterval(this._pollInterval);
+      this._pollInterval = null;
+    }
+  }
+
+  _pollSnapshot() {
     const img = this.shadowRoot.querySelector(".camera-img");
     if (!img || !this._config.camera_entity || !this._hass) return;
     const token = this._hass.states[this._config.camera_entity]?.attributes?.access_token;
@@ -138,14 +150,11 @@ class PrinterCardV2 extends HTMLElement {
     const pre = new Image();
     pre.onload = () => {
       img.src = src;
-      // Update lightbox if active AND showing camera (not 3D model)
+      // Sync lightbox if open and showing camera
       const lb = this.shadowRoot.getElementById("lightbox");
-      if (lb && lb.classList.contains("active")) {
+      if (lb?.classList.contains("active")) {
         const lbImg = lb.querySelector("img");
-        // Only update if lightbox is showing camera image (contains camera_proxy)
-        if (lbImg && lbImg.src.includes("camera_proxy")) {
-          lbImg.src = src;
-        }
+        if (lbImg?.src.includes("camera_proxy")) lbImg.src = src;
       }
     };
     pre.src = src;
@@ -158,17 +167,13 @@ class PrinterCardV2 extends HTMLElement {
     const id = img.media_content_id || img;
     if (!id) return null;
 
-    // Already a usable URL
     if (id.startsWith("http") || id.startsWith("/local/") || id.startsWith("/api/")) return id;
 
-    // image_upload: media-source://image_upload/<uuid>
-    // Resolved via HA's media source thumbnail/proxy endpoint
     if (id.startsWith("media-source://image_upload/")) {
       const uuid = id.replace("media-source://image_upload/", "");
       return `/api/image/serve/${uuid}/original`;
     }
 
-    // media_source local files
     if (id.startsWith("media-source://media_source/local/")) {
       return id.replace("media-source://media_source/local/", "/local/");
     }
@@ -176,7 +181,7 @@ class PrinterCardV2 extends HTMLElement {
     return null;
   }
 
-  // ── Status detection — reads raw sensor value from HA ────
+  // ── Status detection ─────────────────────────────────────
   _status() {
     if (!this._config.printer_status_entity || !this._hass) return "unavailable";
     const stateObj = this._hass.states[this._config.printer_status_entity];
@@ -186,22 +191,18 @@ class PrinterCardV2 extends HTMLElement {
     if (raw.includes("print") || raw.includes("printing") || raw.includes("running") || raw.includes("working")) return "printing";
     if (raw.includes("idle") || raw.includes("standby") || raw.includes("ready") ||
       raw.includes("finish") || raw.includes("operational") || raw === "on") return "idle";
-    // Fallback: if entity exists and has a real value, treat as idle rather than unavailable
     return "idle";
   }
 
-  // ── Propagate hass to all native HA child elements ───────
+  // ── Propagate hass to native HA child elements ────────────
   _propagateHass() {
     if (!this.shadowRoot) return;
-    // All native HA elements that need hass forwarded
     this.shadowRoot.querySelectorAll(
       "hui-tile-card, ha-icon-button, ha-state-label-badge, hui-image-card, mushroom-template-card"
     ).forEach(el => { if (el.hass !== this._hass) el.hass = this._hass; });
 
-    // Update custom text elements
     this._updateJobName();
     this._updateTimeValues();
-    this._updateLayerValue();
     this._updateProgressBar();
   }
 
@@ -210,8 +211,7 @@ class PrinterCardV2 extends HTMLElement {
     if (!jobNameEl) return;
     const jobId = this._config.job_name_entity;
     if (jobId && this._hass?.states[jobId]) {
-      const fileName = this._hass.states[jobId].state || "—";
-      jobNameEl.textContent = fileName;
+      jobNameEl.textContent = this._hass.states[jobId].state || "—";
     }
   }
 
@@ -219,48 +219,52 @@ class PrinterCardV2 extends HTMLElement {
     const timeValues = this.shadowRoot.querySelectorAll(".t-value");
     if (timeValues.length < 2) return;
 
-    // ELAPSED
-    const elapsedId = this._config.print_time_entity;
-    if (elapsedId && this._hass?.states[elapsedId]) {
-      const state = this._hass.states[elapsedId].state;
-      const unit = this._hass.states[elapsedId].attributes?.unit_of_measurement || "";
-      timeValues[0].textContent = state !== "unavailable" && state !== "unknown" ? `${state} ${unit}`.trim() : "—";
-    }
+    const read = (id) => {
+      if (!id || !this._hass?.states[id]) return "—";
+      const s = this._hass.states[id].state;
+      const u = this._hass.states[id].attributes?.unit_of_measurement || "";
+      return (s !== "unavailable" && s !== "unknown") ? `${s} ${u}`.trim() : "—";
+    };
 
-    // REMAINING
-    const remainingId = this._config.print_time_left_entity;
-    if (remainingId && this._hass?.states[remainingId]) {
-      const state = this._hass.states[remainingId].state;
-      const unit = this._hass.states[remainingId].attributes?.unit_of_measurement || "";
-      timeValues[1].textContent = state !== "unavailable" && state !== "unknown" ? `${state} ${unit}`.trim() : "—";
-    }
-
-    // ETA (if 3 elements exist)
-    if (timeValues.length >= 3) {
-      const etaId = this._config.eta_entity;
-      if (etaId && this._hass?.states[etaId]) {
-        const state = this._hass.states[etaId].state;
-        const unit = this._hass.states[etaId].attributes?.unit_of_measurement || "";
-        timeValues[2].textContent = state !== "unavailable" && state !== "unknown" ? `${state} ${unit}`.trim() : "—";
-      }
-    }
-  }
-
-  _updateLayerValue() {
-    // No longer needed - Mushroom handles updates automatically when hass changes
+    timeValues[0].textContent = read(this._config.print_time_entity);
+    timeValues[1].textContent = read(this._config.print_time_left_entity);
+    if (timeValues.length >= 3) timeValues[2].textContent = read(this._config.eta_entity);
   }
 
   _updateProgressBar() {
-    const progressFill = this.shadowRoot.querySelector(".progress-fill");
-    if (!progressFill) return;
-    const pct = this._pct();
-    progressFill.style.width = pct + "%";
+    const fill = this.shadowRoot.querySelector(".progress-fill");
+    if (fill) fill.style.width = this._pct() + "%";
   }
 
-  _showLightbox(src) {
+  _showLightbox(src, isVideo) {
     const lb = this.shadowRoot.getElementById("lightbox");
     if (!lb) return;
-    lb.querySelector("img").src = src;
+
+    // Clean previous content
+    lb.innerHTML = "";
+
+    if (isVideo) {
+      // For HLS streams, show video in lightbox
+      const video = document.createElement("video");
+      video.className = "lb-video";
+      video.src = src;
+      video.autoplay = true;
+      video.muted = true;
+      video.playsInline = true;
+      video.controls = true;
+      lb.appendChild(video);
+    } else {
+      const img = document.createElement("img");
+      img.src = src;
+      lb.appendChild(img);
+    }
+
+    lb.onclick = () => {
+      // Stop video if playing in lightbox
+      const v = lb.querySelector("video");
+      if (v) v.src = "";
+      lb.classList.remove("active");
+    };
     lb.classList.add("active");
   }
 
@@ -270,24 +274,20 @@ class PrinterCardV2 extends HTMLElement {
     const sr = this.shadowRoot;
     const status = this._lastStatus || this._status();
 
-    // Initialize shadow DOM if needed
     if (!sr.querySelector("style")) {
       sr.innerHTML = `<style>${this._css()}</style>`;
     }
 
-    // Get or create lightbox
+    // Lightbox
     let lb = sr.getElementById("lightbox");
     if (!lb) {
       lb = document.createElement("div");
       lb.id = "lightbox";
       lb.className = "lightbox";
-      lb.onclick = () => lb.classList.remove("active");
-      const lbImg = document.createElement("img");
-      lb.appendChild(lbImg);
       sr.appendChild(lb);
     }
 
-    // Get or create card
+    // Card
     let card = sr.querySelector("ha-card");
     if (!card) {
       card = document.createElement("ha-card");
@@ -295,22 +295,17 @@ class PrinterCardV2 extends HTMLElement {
       sr.appendChild(card);
     }
 
-    // Update card content based on status
     card.innerHTML = "";
     if (status === "unavailable") {
       card.appendChild(this._buildUnavail());
     } else if (status === "idle") {
       card.appendChild(this._buildHeader(status));
-      if (this._config.camera_entity) {
-        card.appendChild(this._buildCameraArea(status));
-      }
+      if (this._config.camera_entity) card.appendChild(this._buildCameraArea(status));
       const bottom = this._buildIdleBottom();
       if (bottom) card.appendChild(bottom);
     } else {
       card.appendChild(this._buildHeader(status));
-      if (this._config.camera_entity) {
-        card.appendChild(this._buildCameraArea(status));
-      }
+      if (this._config.camera_entity) card.appendChild(this._buildCameraArea(status));
       const bottom = this._buildPrintingBottom();
       if (bottom) card.appendChild(bottom);
     }
@@ -323,12 +318,10 @@ class PrinterCardV2 extends HTMLElement {
     const wrap = document.createElement("div");
     wrap.className = "view-unavail";
 
-    // Show printer image if configured
     const imgUrl = this._getPrinterImage();
     if (imgUrl) {
       const imgWrap = document.createElement("div");
       imgWrap.className = "unavail-printer-image";
-
       const img = document.createElement("img");
       img.src = imgUrl;
       img.alt = "Drucker";
@@ -349,87 +342,64 @@ class PrinterCardV2 extends HTMLElement {
     const powerWrap = document.createElement("div");
     powerWrap.className = "power-wrap";
     powerWrap.innerHTML = `<span class="power-label">POWER</span>`;
-
-    const btn = this._makeIconButton("mdi:power", "btn-power-on", "power-on");
-    powerWrap.appendChild(btn);
+    powerWrap.appendChild(this._makeIconButton("mdi:power", "btn-power-on", "power-on"));
 
     wrap.appendChild(text);
     wrap.appendChild(powerWrap);
     return wrap;
   }
 
-  // ── Build: Camera area with overlay ──────────────────────
+  // ── Build: Camera area — MJPEG live stream ───────────────
   _buildCameraArea(status) {
+    // Stop any existing poll before deciding stream mode
+    this._stopPoll();
+
     const wrap = document.createElement("div");
     wrap.className = "camera-area";
-    wrap.onclick = () => {
-      const img = wrap.querySelector(".camera-img");
-      if (img) this._showLightbox(img.src);
-    };
 
-    // Custom printer image (shown when no camera available)
     const imgUrl = this._getPrinterImage();
-    let showLiveBadge = false;
+    const camId = this._config.camera_entity;
+    const token = camId && this._hass ? this._hass.states[camId]?.attributes?.access_token : null;
 
     if (imgUrl) {
-      // Use the resolved image URL (handles both bundled and custom uploads)
+      // Static printer image configured — show it, no stream needed
       const img = document.createElement("img");
       img.className = "camera-img printer-custom-img";
       img.src = imgUrl;
       img.alt = "Drucker";
       wrap.appendChild(img);
-    } else if (this._config.printer_image_entity && this._hass) {
-      // Backward compatibility: support for entity-based images
-      const customImgId = this._config.printer_image_entity;
-      let customImgUrl = null;
+      wrap.onclick = () => this._showLightbox(imgUrl, false);
 
-      // Check if it's a media entity (from media picker)
-      if (customImgId.startsWith("media-source://")) {
-        customImgUrl = customImgId;
-      } else if (this._hass.states[customImgId]) {
-        // For image entity
-        customImgUrl = this._hass?.states[customImgId]?.state?.startsWith("http")
-          ? this._hass.states[customImgId].state
-          : this._hass?.states[customImgId]?.attributes?.entity_picture;
-      }
+    } else if (camId && token) {
+      // ── Live stream — try MJPEG first ──────────────────────
+      // /api/camera_proxy_stream delivers a multipart/x-mixed-replace MJPEG
+      // stream which browsers display natively inside an <img> tag.
+      const mjpegUrl = `/api/camera_proxy_stream/${camId}?token=${token}`;
 
-      if (customImgUrl) {
-        const img = document.createElement("img");
-        img.className = "camera-img printer-custom-img";
-        img.src = customImgUrl;
-        img.alt = "Drucker";
-        wrap.appendChild(img);
-      } else {
-        wrap.appendChild(this._cameraPlaceholder());
-      }
+      const img = document.createElement("img");
+      img.className = "camera-img";
+      img.alt = "Kamera";
+      img.src = mjpegUrl;
+
+      // If MJPEG fails (camera doesn't support it), fall back gracefully
+      img.onerror = () => {
+        this._tryHlsOrPoll(wrap, img, camId, token);
+      };
+
+      wrap.appendChild(img);
+      wrap.onclick = () => {
+        // Snapshot for lightbox (MJPEG src already shows live in-card)
+        const snapUrl = `/api/camera_proxy/${camId}?token=${token}&t=${Date.now()}`;
+        this._showLightbox(snapUrl, false);
+      };
+      this._streamMode = "mjpeg";
+
     } else {
-      // Camera image
-      const camId = this._config.camera_entity;
-      if (camId && this._hass) {
-        const token = this._hass.states[camId]?.attributes?.access_token;
-        const src = token ? `/api/camera_proxy/${camId}?token=${token}&t=${Date.now()}` : null;
-        if (src) {
-          const img = document.createElement("img");
-          img.className = "camera-img";
-          img.src = src;
-          img.alt = "Kamera";
-          wrap.appendChild(img);
-        } else {
-          wrap.appendChild(this._cameraPlaceholder());
-        }
-      } else {
-        wrap.appendChild(this._cameraPlaceholder());
-      }
+      wrap.appendChild(this._cameraPlaceholder());
     }
 
-    // Overlay (only live badge now - header shows status)
-    const overlay = document.createElement("div");
-    overlay.className = "cam-overlay";
-
-    // Live badge - only show when camera feed is available
-    const hasCamera = this._config.camera_entity && this._hass &&
-      this._hass.states[this._config.camera_entity]?.attributes?.access_token;
-    if (hasCamera) {
+    // LIVE badge — shown for any live stream mode
+    if (camId && token) {
       const live = document.createElement("div");
       live.className = "live-badge";
       live.innerHTML = `<div class="live-dot"></div>LIVE`;
@@ -439,17 +409,57 @@ class PrinterCardV2 extends HTMLElement {
     return wrap;
   }
 
-  // ── Build: Header (printer image + name + status + power) ─
+  /**
+   * Called when the MJPEG stream <img> fires onerror.
+   * Tries to replace it with an HLS <video>; if that also fails,
+   * falls back to the 5-second snapshot poller.
+   */
+  _tryHlsOrPoll(wrap, failedImg, camId, token) {
+    // Remove the broken img
+    failedImg.remove();
+
+    // HA exposes an HLS stream when the camera supports it (e.g. Frigate, ONVIF)
+    const hlsUrl = `/api/camera_proxy_stream/${camId}?token=${token}&format=hls`;
+
+    const video = document.createElement("video");
+    video.className = "camera-img";
+    video.autoplay = true;
+    video.muted = true;
+    video.playsInline = true;
+    video.loop = true;
+
+    video.onerror = () => {
+      // Both stream types failed — fall back to snapshot polling
+      video.remove();
+      this._streamMode = "poll";
+      const snapUrl = `/api/camera_proxy/${camId}?token=${token}&t=${Date.now()}`;
+      const img = document.createElement("img");
+      img.className = "camera-img";
+      img.alt = "Kamera";
+      img.src = snapUrl;
+      // Insert before the live badge (last child)
+      wrap.insertBefore(img, wrap.lastChild);
+      this._startPoll();
+    };
+
+    // Insert before live badge
+    wrap.insertBefore(video, wrap.lastChild);
+    video.src = hlsUrl; // set src after onerror is wired up
+    this._streamMode = "hls";
+
+    // Update click handler for video lightbox
+    wrap.onclick = () => this._showLightbox(hlsUrl, true);
+  }
+
+  // ── Build: Header ─────────────────────────────────────────
   _buildHeader(status) {
     const wrap = document.createElement("div");
     wrap.className = "view-unavail";
 
-    // Printer image or icon
     const imgUrl = this._getPrinterImage();
     if (imgUrl) {
       const imgWrap = document.createElement("div");
       imgWrap.className = "unavail-printer-image";
-
       const img = document.createElement("img");
       img.src = imgUrl;
       img.alt = "Drucker";
@@ -462,23 +472,18 @@ class PrinterCardV2 extends HTMLElement {
       wrap.appendChild(icon);
     }
 
-    // Name and status
-    const text = document.createElement("div");
     const statusText = status === "printing" ? "Printing..." : (status === "unavailable" ? "Offline" : "Idle");
+    const text = document.createElement("div");
     text.innerHTML = `
       <div class="unavail-name">${this._config.name || "3D-Drucker"}</div>
       <div class="unavail-sub">${statusText}</div>`;
 
-    // Power button
     const powerWrap = document.createElement("div");
     powerWrap.className = "power-wrap";
     powerWrap.innerHTML = `<span class="power-label">POWER</span>`;
 
-    if (status === "printing") {
-      // No power button during printing
-    } else {
-      const btn = this._makeIconButton("mdi:power", "btn-power-on", "power-on");
-      powerWrap.appendChild(btn);
+    if (status !== "printing") {
+      powerWrap.appendChild(this._makeIconButton("mdi:power", "btn-power-on", "power-on"));
     }
 
     wrap.appendChild(text);
@@ -493,7 +498,7 @@ class PrinterCardV2 extends HTMLElement {
     return d;
   }
 
-  // ── Build: Idle bottom — native hui-tile-cards ────────────
+  // ── Build: Idle bottom ────────────────────────────────────
   _buildIdleBottom() {
     const wrap = document.createElement("div");
     wrap.className = "idle-bottom";
@@ -523,7 +528,6 @@ class PrinterCardV2 extends HTMLElement {
     const infoRow = document.createElement("div");
     infoRow.className = "print-info-row";
 
-    // Thumbnail with click-to-zoom
     const thumbWrap = document.createElement("div");
     thumbWrap.className = "thumb-wrap";
 
@@ -538,7 +542,7 @@ class PrinterCardV2 extends HTMLElement {
       img.src = thumbUrl;
       img.alt = "Modell";
       thumbWrap.appendChild(img);
-      thumbWrap.onclick = () => this._showLightbox(thumbUrl);
+      thumbWrap.onclick = () => this._showLightbox(thumbUrl, false);
     } else {
       const ph = document.createElement("div");
       ph.className = "thumb-sm-ph";
@@ -547,19 +551,14 @@ class PrinterCardV2 extends HTMLElement {
     }
     infoRow.appendChild(thumbWrap);
 
-    // Job info: job name + elapsed / remaining via native state labels
     const jobInfo = document.createElement("div");
     jobInfo.className = "job-info";
 
     const jobName = document.createElement("div");
     jobName.className = "job-name";
     const jobId = this._config.job_name_entity;
-    if (jobId && this._hass?.states[jobId]) {
-      const fileName = this._hass.states[jobId].state || "—";
-      jobName.textContent = fileName;
-    } else {
-      jobName.textContent = "—";
-    }
+    jobName.textContent = (jobId && this._hass?.states[jobId])
+      ? (this._hass.states[jobId].state || "—") : "—";
     jobInfo.appendChild(jobName);
 
     const timeRow = document.createElement("div");
@@ -571,25 +570,23 @@ class PrinterCardV2 extends HTMLElement {
     infoRow.appendChild(jobInfo);
     wrap.appendChild(infoRow);
 
-    // Progress bar — driven by native entity value
+    // Progress bar
     const progWrap = document.createElement("div");
     progWrap.className = "progress-wrap";
     const track = document.createElement("div");
     track.className = "progress-track";
     const fill = document.createElement("div");
     fill.className = "progress-fill";
-    const pct = this._pct();
-    fill.style.width = pct + "%";
+    fill.style.width = this._pct() + "%";
     track.appendChild(fill);
     progWrap.appendChild(track);
     wrap.appendChild(progWrap);
 
-    // Sensor grid — all native hui-tile-cards
+    // Sensor grid
     const sensorsWrap = document.createElement("div");
     sensorsWrap.className = "print-sensors";
     const grid = document.createElement("div");
     grid.className = "sensor-grid-2";
-
 
     const tiles = [
       this._buildLayerTile(),
@@ -601,9 +598,7 @@ class PrinterCardV2 extends HTMLElement {
       this._buildTile(this._config.eta_entity, "mdi:clock-check-outline", "orange")
     ];
 
-    tiles.forEach(tile => {
-      if (tile) grid.appendChild(tile);
-    });
+    tiles.forEach(tile => { if (tile) grid.appendChild(tile); });
 
     if (grid.children.length > 0) {
       sensorsWrap.appendChild(grid);
@@ -614,17 +609,14 @@ class PrinterCardV2 extends HTMLElement {
   }
 
   // ── Native hui-tile-card factory ─────────────────────────
-  // hui-tile-card renders the entity's icon, name, state + unit natively
   _buildTile(entityId, fallbackIcon, color) {
     if (!entityId) return null;
 
     const wrapper = document.createElement("div");
     wrapper.className = `tile-wrap tile-${color}`;
 
-    // Extract a clean name from the entity attributes
     const stateObj = this._hass?.states[entityId];
     const attrName = stateObj?.attributes?.friendly_name || entityId;
-    // Remove device prefix (everything before the last space or use the whole name)
     const cleanName = attrName.includes(' ')
       ? attrName.split(' ').slice(1).join(' ')
       : attrName;
@@ -645,14 +637,12 @@ class PrinterCardV2 extends HTMLElement {
     return wrapper;
   }
 
-  // Layer tile: two entities combined into one display
+  // Layer tile: two entities combined
   _buildLayerTile() {
     const curId = this._config.current_layer_entity;
     if (!curId) return null;
 
     const totId = this._config.total_layers_entity;
-    // Use official Home Assistant Jinja templates for reliable updates
-    // Handle unavailable/unknown states by showing "—" instead
     let secondary = `{% set cur = states('${curId}') %}{% if cur not in ['unavailable', 'unknown', 'none'] %}{{ cur }}{% else %}—{% endif %}`;
     if (totId) {
       secondary = `{% set cur = states('${curId}') %}{% set tot = states('${totId}') %}{% if cur not in ['unavailable', 'unknown', 'none'] and tot not in ['unavailable', 'unknown', 'none'] %}{{ cur }} / {{ tot }}{% else %}—{% endif %}`;
@@ -674,7 +664,7 @@ class PrinterCardV2 extends HTMLElement {
     return tile;
   }
 
-  // Time column for printing view
+  // Time column
   _buildTimeCol(label, entityId, accent) {
     const wrap = document.createElement("div");
     wrap.style.textAlign = accent ? "right" : "left";
@@ -687,7 +677,7 @@ class PrinterCardV2 extends HTMLElement {
     if (entityId && this._hass?.states[entityId]) {
       const state = this._hass.states[entityId].state;
       const unit = this._hass.states[entityId].attributes?.unit_of_measurement || "";
-      v.textContent = state !== "unavailable" && state !== "unknown" ? `${state} ${unit}`.trim() : "—";
+      v.textContent = (state !== "unavailable" && state !== "unknown") ? `${state} ${unit}`.trim() : "—";
     } else {
       v.textContent = "—";
     }
@@ -695,12 +685,11 @@ class PrinterCardV2 extends HTMLElement {
     return wrap;
   }
 
-  // ── Native ha-icon-button factory ────────────────────────
+  // ── ha-icon-button factory ────────────────────────────────
   _makeIconButton(icon, cssClass, action) {
     const btn = document.createElement("ha-icon-button");
     btn.className = `cam-action-btn ${cssClass}`;
     btn.dataset.action = action;
-    // ha-icon-button needs a nested ha-icon or path
     const inner = document.createElement("ha-icon");
     inner.setAttribute("icon", icon);
     btn.appendChild(inner);
@@ -773,28 +762,37 @@ class PrinterCardV2 extends HTMLElement {
                     text-transform: uppercase; color: var(--secondary-text-color); }
 
     /* ── CAMERA ──────────────────────────────────────────── */
-    .camera-area  { 
-      position: relative; 
-      width: 100%; 
-      background: #111; 
+    .camera-area {
+      position: relative;
+      width: 100%;
+      background: #111;
       line-height: 0;
-      margin: 0;
-      padding: 0;
+      margin: 0; padding: 0;
       cursor: zoom-in;
     }
-    .view-unavail + .camera-area {
-      margin-top: 8px;
-    }
-    .camera-img   {
-      width: 100%; 
+    .view-unavail + .camera-area { margin-top: 2px; }
+
+    /* Both <img> (MJPEG/snapshot) and <video> (HLS) share the same sizing */
+    .camera-img {
+      width: 100%;
       height: auto;
-      display: block; 
+      display: block;
       object-fit: cover;
-      aspect-ratio: 16/9; 
+      aspect-ratio: 16/9;
       background: #111;
-      margin: 0;
-      padding: 0;
+      margin: 0; padding: 0;
     }
+
+    .printer-custom-img { object-fit: contain; background: #1a1a1a; }
+
+    .camera-no {
+      width: 100%; height: 180px; display: flex; align-items: center;
+      justify-content: center; background: #1a1a1a; color: #555; gap: 8px;
+      font-size: .85rem;
+    }
+    .camera-no ha-icon { --mdc-icon-size: 22px; }
+
+    /* ── LIGHTBOX ─────────────────────────────────────────── */
     .lightbox {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(0,0,0,0.92); z-index: 9999;
@@ -807,35 +805,13 @@ class PrinterCardV2 extends HTMLElement {
       box-shadow: 0 0 50px rgba(0,0,0,0.8);
       object-fit: contain;
     }
-    .printer-custom-img {
-      object-fit: contain;
-      background: #1a1a1a;
+    .lb-video {
+      max-width: 95%; max-height: 95%; border-radius: 8px;
+      box-shadow: 0 0 50px rgba(0,0,0,0.8);
+      background: #000;
     }
-    .camera-no {
-      width: 100%; height: 180px; display: flex; align-items: center;
-      justify-content: center; background: #1a1a1a; color: #555; gap: 8px;
-      font-size: .85rem;
-    }
-    .camera-no ha-icon { --mdc-icon-size: 22px; }
 
-    .cam-overlay {
-      position: absolute; top: 10px; left: 10px; right: 10px;
-      display: flex; align-items: center; justify-content: space-between;
-      pointer-events: none;
-    }
-    .cam-overlay > * { pointer-events: all; }
-
-    .status-pill {
-      display: inline-flex; align-items: center; gap: 7px;
-      padding: 6px 13px 6px 10px; border-radius: 40px;
-      backdrop-filter: blur(14px) saturate(1.6);
-      font-size: .82rem; font-weight: 600;
-    }
-    .status-pill ha-icon { --mdc-icon-size: 16px; }
-    .pill-idle     { background: rgba(255,255,255,.82); color: #1a1a1a; }
-    .pill-printing { background: rgba(28,28,28,.78);    color: #ff6d00; }
-    .pill-printing ha-icon { color: #ff6d00; }
-
+    /* ── LIVE BADGE ───────────────────────────────────────── */
     .live-badge {
       position: absolute; bottom: 10px; left: 12px;
       display: flex; align-items: center; gap: 5px;
@@ -847,7 +823,7 @@ class PrinterCardV2 extends HTMLElement {
     }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-    /* icon buttons */
+    /* ── ICON BUTTONS ─────────────────────────────────────── */
     .cam-action-btn {
       --mdc-icon-button-size: 40px;
       --mdc-icon-size: 20px;
@@ -857,101 +833,45 @@ class PrinterCardV2 extends HTMLElement {
     .btn-cam-off   { background: rgba(244,67,54,.15); backdrop-filter: blur(12px); color: #f44336; }
 
     /* ── TILE WRAPPERS ───────────────────────────────────── */
-    /* Override hui-tile-card internals to match our color scheme */
-    .tile-wrap {
-      border-radius: 12px;
-      overflow: hidden;
-      position: relative;
-    }
+    .tile-wrap { border-radius: 12px; overflow: hidden; position: relative; }
     .tile-blue hui-tile-card {
-      --tile-color: #2196f3;
-      --rgb-tile-color: 33, 150, 243;
-      --state-color: #2196f3;
-      --ha-card-background: rgba(33,150,243,.08);
-      --ha-card-box-shadow: none;
-      --ha-card-border-radius: 12px;
-      --primary-text-color: white;
-      --secondary-text-color: #2196f3;
-      margin: 0;
-    }
-    .tile-blue hui-tile-card ha-tile-icon {
-      --tile-color: #2196f3;
-      --rgb-tile-color: 33, 150, 243;
+      --tile-color: #2196f3; --rgb-tile-color: 33, 150, 243; --state-color: #2196f3;
+      --ha-card-background: rgba(33,150,243,.08); --ha-card-box-shadow: none;
+      --ha-card-border-radius: 12px; --primary-text-color: white;
+      --secondary-text-color: #2196f3; margin: 0;
     }
     .tile-orange hui-tile-card {
-      --tile-color: #ff6d00;
-      --rgb-tile-color: 255, 109, 0;
-      --state-color: #ff6d00;
-      --ha-card-background: rgba(255,109,0,.07);
-      --ha-card-box-shadow: none;
-      --ha-card-border-radius: 12px;
-      --primary-text-color: white;
-      --secondary-text-color: #ff6d00;
-      margin: 0;
+      --tile-color: #ff6d00; --rgb-tile-color: 255, 109, 0; --state-color: #ff6d00;
+      --ha-card-background: rgba(255,109,0,.07); --ha-card-box-shadow: none;
+      --ha-card-border-radius: 12px; --primary-text-color: white;
+      --secondary-text-color: #ff6d00; margin: 0;
     }
-    .tile-orange hui-tile-card ha-tile-icon {
-      --tile-color: #ff6d00;
-      --rgb-tile-color: 255, 109, 0;
-    }
-    /* Force colors for all tile content */
     .tile-orange hui-tile-card .primary,
-    .tile-orange hui-tile-card ha-tile-info .primary {
-      color: white !important;
-    }
+    .tile-orange hui-tile-card ha-tile-info .primary { color: white !important; }
     .tile-orange hui-tile-card .state,
     .tile-orange hui-tile-card .value,
     .tile-orange hui-tile-card .secondary,
-    .tile-orange hui-tile-card ha-tile-info .secondary {
-      color: #ff6d00 !important;
-    }
+    .tile-orange hui-tile-card ha-tile-info .secondary { color: #ff6d00 !important; }
     .tile-blue hui-tile-card .primary,
-    .tile-blue hui-tile-card ha-tile-info .primary {
-      color: white !important;
-    }
+    .tile-blue hui-tile-card ha-tile-info .primary { color: white !important; }
     .tile-blue hui-tile-card .state,
     .tile-blue hui-tile-card .value,
     .tile-blue hui-tile-card .secondary,
-    .tile-blue hui-tile-card ha-tile-info .secondary {
-      color: #2196f3 !important;
-    }
+    .tile-blue hui-tile-card ha-tile-info .secondary { color: #2196f3 !important; }
 
-
-    /* Mushroom Layer Tile tweaks to match hui-tile-card */
+    /* Mushroom Layer Tile */
     .mushroom-layer-tile {
-      margin: 0;
-      --ha-card-border-radius: 12px;
-      --ha-card-box-shadow: none;
+      margin: 0; --ha-card-border-radius: 12px; --ha-card-box-shadow: none;
       --ha-card-background: rgba(255,109,0,.07);
-      --mush-icon-size: 40px;
-      --mush-spacing: 12px;
+      --mush-icon-size: 40px; --mush-spacing: 12px;
     }
     .mushroom-layer-tile ha-card {
-      background: transparent !important;
-      border: none !important;
-      box-shadow: none !important;
+      background: transparent !important; border: none !important; box-shadow: none !important;
     }
 
     /* ── IDLE BOTTOM ─────────────────────────────────────── */
     .idle-bottom { padding: 12px 14px 14px; }
-    .temp-row {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;
-    }
-    .meta-row {
-      display: flex; justify-content: space-between; align-items: flex-start;
-      padding-top: 10px;
-      border-top: 1px solid var(--divider-color, rgba(0,0,0,.07));
-    }
-    .meta-label { font-size: .7rem; color: var(--secondary-text-color); }
-    .meta-value {
-      font-size: .88rem; font-weight: 500; margin-top: 2px;
-      /* strip badge chrome — show only text */
-    }
-    .meta-value ha-state-label-badge {
-      --ha-label-badge-size: 0px;
-      --ha-label-badge-font-size: .88rem;
-      font-weight: 500;
-    }
-    .meta-value.accent { color: #ff6d00; font-weight: 700; }
+    .temp-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
 
     /* ── PRINTING BOTTOM ─────────────────────────────────── */
     .print-info-row {
@@ -962,10 +882,7 @@ class PrinterCardV2 extends HTMLElement {
       overflow: hidden; flex-shrink: 0; cursor: zoom-in;
       background: var(--secondary-background-color);
     }
-    .thumb-sm {
-      width: 100%; height: 100%; object-fit: cover;
-      display: block;
-    }
+    .thumb-sm { width: 100%; height: 100%; object-fit: cover; display: block; }
     .thumb-sm-ph {
       width: 100%; height: 100%;
       display: flex; align-items: center; justify-content: center;
@@ -979,7 +896,6 @@ class PrinterCardV2 extends HTMLElement {
                  color: var(--secondary-text-color); font-weight: 600; white-space: nowrap; }
     .t-value   { font-size: .82rem; font-weight: 600; margin-top: 1px; white-space: nowrap; }
     .t-value.remaining { color: #ff6d00; }
-    .t-value ha-state-label-badge { --ha-label-badge-font-size: .88rem; }
 
     .progress-wrap  { padding: 10px 14px 0; }
     .progress-track {
