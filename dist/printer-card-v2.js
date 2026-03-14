@@ -401,8 +401,8 @@ class PrinterCardV2 extends HTMLElement {
     const tempRow = document.createElement("div");
     tempRow.className = "temp-row";
     const bedTile = this._buildSensorCard(this._config.bed_temp_entity, "mdi:thermometer", "blue");
-    const nozzleTile = this._buildSensorCard(this._config.nozzle_temp_entity, "mdi:printer-3d-nozzle-heat", "blue");
-    const powerTile = this._buildTile(this._config.power_sensor_entity, "mdi:lightning-bolt", "yellow");
+    const nozzleTile = this._buildSensorCard(this._config.nozzle_temp_entity, "mdi:printer-3d-nozzle-heat", "orange");
+    const powerTile = this._buildSensorCard(this._config.power_sensor_entity, "mdi:lightning-bolt", "yellow");
     if (bedTile) tempRow.appendChild(bedTile);
     if (nozzleTile) tempRow.appendChild(nozzleTile);
     if (powerTile) tempRow.appendChild(powerTile);
@@ -707,7 +707,7 @@ class PrinterCardV2 extends HTMLElement {
     .tile-blue hui-tile-card .secondary, .tile-blue hui-tile-card ha-tile-info .secondary { color: #2196f3 !important; }
 
     /* ── SENSOR CARD ────────────────────────────────────────── */
-    .sensor-card-wrap { border-radius: 12px; overflow: hidden; min-height: 80px; display: block; }
+    .sensor-card-wrap { border-radius: 12px; overflow: hidden; display: block; }
     .sensor-blue hui-sensor-card { --card-background: rgba(33,150,243,.08); --icon-color: #2196f3; }
   
     .mushroom-layer-tile { margin: 0; --ha-card-border-radius: 12px; --ha-card-box-shadow: none; --mush-icon-size: 40px; --mush-spacing: 12px; }
