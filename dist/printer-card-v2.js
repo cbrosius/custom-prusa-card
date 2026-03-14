@@ -153,23 +153,10 @@ class PrinterCardV2 extends HTMLElement {
 
   // ── Image resolution helper ─────────────────────────────
   _getPrinterImage() {
-    if (this._config.printer_image) {
-      const img = this._config.printer_image;
-      if (typeof img === "string") {
-        return img;
-      }
-      if (img && img.media_content_id) {
-        // Convert media-source:// URLs to HA proxy format
-        const mediaId = img.media_content_id;
-        if (mediaId.startsWith("media-source://")) {
-          // Extract path after "media-source://" and convert to proxy URL
-          const path = mediaId.substring("media-source://".length);
-          return `/api/media_source_proxy/${path}`;
-        }
-        return mediaId;
-      }
+    const img = this._config.printer_image;
+    if (img && img.media_content_id) {
+      return img.media_content_id;
     }
-
     return null;
   }
 
