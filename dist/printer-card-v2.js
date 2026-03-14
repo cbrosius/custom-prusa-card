@@ -32,24 +32,6 @@ class PrinterCardV2Editor extends HTMLElement {
       { name: "thumbnail_entity", label: "Modell-Vorschaubild (Sensor/Entity)", selector: { entity: {} } },
       { name: "job_name_entity", label: "Dateiname / Job-Name Sensor", selector: { entity: { domain: "sensor" } } },
       {
-        name: "printer_image",
-        label: "Drucker-Bild",
-        selector: {
-          select: {
-            options: [
-              { label: "Kein Bild", value: "" },
-              { label: "Prusa Core ONE", value: "PrusaCoreOne.jpg" },
-              { label: "Prusa Mini", value: "PrusaMini.jpg" },
-              { label: "A1 Mini", value: "A1Mini.jpg" },
-              { label: "Kossel", value: "Kossel.jpg" },
-              { label: "Prusa MK3", value: "PrusaMK3.jpg" },
-              { label: "Custom Upload", value: "custom" },
-            ],
-            mode: "dropdown"
-          }
-        }
-      },
-      {
         name: "printer_image2",
         label: "Drucker-Bild (Medienauswahl)",
         selector: {
@@ -71,14 +53,6 @@ class PrinterCardV2Editor extends HTMLElement {
 
   _schema() {
     const schema = [...this._baseSchema()];
-    // Dynamically add image upload field only when "custom" is selected
-    if (this._config.printer_image === "custom") {
-      schema.push({
-        name: "custom_image",
-        label: "Benutzerdefiniertes Bild hochladen",
-        selector: { image: {} }
-      });
-    }
     return schema;
   }
 
@@ -192,18 +166,6 @@ class PrinterCardV2 extends HTMLElement {
       if (img2 && img2.media_content_id) {
         return img2.media_content_id;
       }
-    }
-
-    const model = this._config.printer_image || "";
-
-    if (model === "custom") {
-      return this._config.custom_image || "/hacsfiles/custom-printer-card/default-printer.png";
-    }
-
-    if (model) {
-      const scriptPath = new URL(import.meta.url).pathname;
-      const basePath = scriptPath.substring(0, scriptPath.lastIndexOf('/'));
-      return `${basePath}/images/${model}`;
     }
 
     return null;
