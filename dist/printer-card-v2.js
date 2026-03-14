@@ -300,10 +300,12 @@ class PrinterCardV2 extends HTMLElement {
     if (status === "unavailable") {
       card.appendChild(this._buildUnavail());
     } else if (status === "idle") {
+      card.appendChild(this._buildHeader(status));
       card.appendChild(this._buildCameraArea(status));
       const bottom = this._buildIdleBottom();
       if (bottom) card.appendChild(bottom);
     } else {
+      card.appendChild(this._buildHeader(status));
       card.appendChild(this._buildCameraArea(status));
       const bottom = this._buildPrintingBottom();
       if (bottom) card.appendChild(bottom);
@@ -416,32 +418,9 @@ class PrinterCardV2 extends HTMLElement {
       }
     }
 
-    // Overlay
+    // Overlay (only live badge now - header shows status)
     const overlay = document.createElement("div");
     overlay.className = "cam-overlay";
-
-    // Status pill — uses ha-state-label-badge for the status entity
-    const pill = document.createElement("div");
-    pill.className = `status-pill ${status === "printing" ? "pill-printing" : "pill-idle"}`;
-
-    const pillIcon = document.createElement("ha-icon");
-    pillIcon.setAttribute("icon", status === "printing" ? "mdi:printer-3d-nozzle" : "mdi:printer-3d");
-    pill.appendChild(pillIcon);
-
-    const pillText = document.createElement("span");
-    pillText.textContent = status === "printing"
-      ? "PRINTING..."
-      : `${this._config.name || "3D-Drucker"} – Idle`;
-    pill.appendChild(pillText);
-    overlay.appendChild(pill);
-
-    // Action button
-    if (status === "printing") {
-    } else {
-      overlay.appendChild(this._makeIconButton("mdi:power", "btn-cam-off", "power-off"));
-    }
-
-    wrap.appendChild(overlay);
 
     // Live badge - only show when camera feed is available
     const hasCamera = this._config.camera_entity && this._hass &&
@@ -453,6 +432,53 @@ class PrinterCardV2 extends HTMLElement {
       wrap.appendChild(live);
     }
 
+    return wrap;
+  }
+
+  // ── Build: Header (printer image + name + status + power) ─
+  _buildHeader(status) {
+    const wrap = document.createElement("div");
+    wrap.className = "view-unavail";
+
+    // Printer image or icon
+    const imgUrl = this._getPrinterImage();
+    if (imgUrl) {
+      const imgWrap = document.createElement("div");
+      imgWrap.className = "unavail-printer-image";
+
+      const img = document.createElement("img");
+      img.src = imgUrl;
+      img.alt = "Drucker";
+      imgWrap.appendChild(img);
+      wrap.appendChild(imgWrap);
+    } else {
+      const icon = document.createElement("ha-icon");
+      icon.setAttribute("icon", "mdi:printer-3d");
+      icon.className = "unavail-icon-el";
+      wrap.appendChild(icon);
+    }
+
+    // Name and status
+    const text = document.createElement("div");
+    const statusText = status === "printing" ? "Printing..." : (status === "unavailable" ? "Offline" : "Idle");
+    text.innerHTML = `
+      <div class="unavail-name">${this._config.name || "3D-Drucker"}</div>
+      <div class="unavail-sub">${statusText}</div>`;
+
+    // Power button
+    const powerWrap = document.createElement("div");
+    powerWrap.className = "power-wrap";
+    powerWrap.innerHTML = `<span class="power-label">POWER</span>`;
+
+    if (status === "printing") {
+      // No power button during printing
+    } else {
+      const btn = this._makeIconButton("mdi:power", "btn-power-on", "power-on");
+      powerWrap.appendChild(btn);
+    }
+
+    wrap.appendChild(text);
+    wrap.appendChild(powerWrap);
     return wrap;
   }
 
@@ -751,6 +777,9 @@ class PrinterCardV2 extends HTMLElement {
       margin: 0;
       padding: 0;
       cursor: zoom-in;
+    }
+    .view-unavail + .camera-area {
+      margin-top: 8px;
     }
     .camera-img   {
       width: 100%; 
