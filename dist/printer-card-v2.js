@@ -155,26 +155,27 @@ class PrinterCardV2 extends HTMLElement {
   _getPrinterImage() {
     const img = this._config.printer_image;
     if (!img) return null;
-
     const id = img.media_content_id || img;
     if (!id) return null;
 
-    // Already a usable URL (http/https or /local/)
-    if (id.startsWith("http") || id.startsWith("/local/")) return id;
+    // Already a usable URL
+    if (id.startsWith("http") || id.startsWith("/local/") || id.startsWith("/api/")) return id;
 
-    // Convert media-source://media_source/local/foo.jpg → /local/foo.jpg
+    // image_upload: media-source://image_upload/<uuid>
+    // Resolved via HA's media source thumbnail/proxy endpoint
+    if (id.startsWith("media-source://image_upload/")) {
+      const uuid = id.replace("media-source://image_upload/", "");
+      return `/api/image/serve/${uuid}/original`;
+    }
+
+    // media_source local files
     if (id.startsWith("media-source://media_source/local/")) {
       return id.replace("media-source://media_source/local/", "/local/");
     }
 
-    // Convert media-source://media_source/media/foo.jpg → /media/local/foo.jpg
-    if (id.startsWith("media-source://media_source/")) {
-      return id.replace("media-source://media_source/", "/media/local/");
-    }
-
     return null;
   }
-  
+
   // ── Status detection — reads raw sensor value from HA ────
   _status() {
     if (!this._config.printer_status_entity || !this._hass) return "unavailable";
