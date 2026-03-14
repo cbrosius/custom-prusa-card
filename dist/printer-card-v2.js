@@ -301,12 +301,16 @@ class PrinterCardV2 extends HTMLElement {
       card.appendChild(this._buildUnavail());
     } else if (status === "idle") {
       card.appendChild(this._buildHeader(status));
-      card.appendChild(this._buildCameraArea(status));
+      if (this._config.camera_entity) {
+        card.appendChild(this._buildCameraArea(status));
+      }
       const bottom = this._buildIdleBottom();
       if (bottom) card.appendChild(bottom);
     } else {
       card.appendChild(this._buildHeader(status));
-      card.appendChild(this._buildCameraArea(status));
+      if (this._config.camera_entity) {
+        card.appendChild(this._buildCameraArea(status));
+      }
       const bottom = this._buildPrintingBottom();
       if (bottom) card.appendChild(bottom);
     }
