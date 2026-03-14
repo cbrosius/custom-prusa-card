@@ -155,9 +155,11 @@ class PrinterCardV2 extends HTMLElement {
     this.shadowRoot.querySelectorAll(
       "hui-tile-card, hui-sensor-card, ha-icon-button, ha-state-label-badge, mushroom-template-card"
     ).forEach(el => { if (el.hass !== this._hass) el.hass = this._hass; });
-    this._updateJobName();
-    this._updateTimeValues();
-    this._updateProgressBar();
+
+    // Guard each helper call — avoids crashes if DOM isn't fully built yet
+    if (typeof this._updateJobName === "function") this._updateJobName();
+    if (typeof this._updateTimeValues === "function") this._updateTimeValues();
+    if (typeof this._updateProgressBar === "function") this._updateProgressBar();
   }
 
   _updateTimeValues() {
@@ -526,11 +528,28 @@ class PrinterCardV2 extends HTMLElement {
     const totId = this._config.total_layers_entity;
     let secondary = `{% set cur = states('${curId}') %}{% if cur not in ['unavailable','unknown','none'] %}{{ cur }}{% else %}—{% endif %}`;
     if (totId) secondary = `{% set cur = states('${curId}') %}{% set tot = states('${totId}') %}{% if cur not in ['unavailable','unknown','none'] and tot not in ['unavailable','unknown','none'] %}{{ cur }} / {{ tot }}{% else %}—{% endif %}`;
+
     const tile = document.createElement("mushroom-template-card");
     tile.className = "mushroom-layer-tile";
-    tile.setConfig({ type: "custom:mushroom-template-card", primary: "Layer", secondary,
-      icon: "mdi:layers-triple", layout: "horizontal",
-      tap_action: { action: "more-info" }, entity: curId });
+
+    const cfg = {
+      type: "custom:mushroom-template-card",
+      primary: "Layer",
+      secondary,
+      icon: "mdi:layers-triple",
+      layout: "horizontal",
+      tap_action: { action: "more-info" },
+      entity: curId
+    };
+
+    // Defer setConfig until the custom element is actually defined
+    customElements.whenDefined("mushroom-template-card").then(() => {
+      if (typeof tile.setConfig === "function") {
+        tile.setConfig(cfg);
+        if (this._hass) tile.hass = this._hass;
+      }
+    });
+
     return tile;
   }
 
