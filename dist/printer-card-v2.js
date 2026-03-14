@@ -22,6 +22,7 @@ class PrinterCardV2Editor extends HTMLElement {
       { name: "printer_status_entity", label: "Drucker-Status Sensor", selector: { entity: {} } },
       { name: "camera_entity", label: "Kamera", selector: { entity: { domain: "camera" } } },
       { name: "power_switch_entity", label: "Spannungsversorgungs-Schalter", selector: { entity: { domain: ["switch", "input_boolean"] } } },
+      { name: "power_sensor_entity", label: "Leistungsaufnahme (W) Sensor", selector: { entity: { domain: "sensor" } } },
       { name: "bed_temp_entity", label: "Druckbett-Temperatur Sensor", selector: { entity: { domain: "sensor" } } },
       { name: "nozzle_temp_entity", label: "Nozzle-Temperatur Sensor", selector: { entity: { domain: "sensor" } } },
       { name: "print_progress_entity", label: "Druckfortschritt (%) Sensor", selector: { entity: { domain: "sensor" } } },
@@ -407,8 +408,10 @@ class PrinterCardV2 extends HTMLElement {
     tempRow.className = "temp-row";
     const bedTile = this._buildTile(this._config.bed_temp_entity, "mdi:thermometer", "blue");
     const nozzleTile = this._buildTile(this._config.nozzle_temp_entity, "mdi:printer-3d-nozzle-heat", "blue");
+    const powerTile = this._buildTile(this._config.power_sensor_entity, "mdi:lightning-bolt", "yellow");
     if (bedTile) tempRow.appendChild(bedTile);
     if (nozzleTile) tempRow.appendChild(nozzleTile);
+    if (powerTile) tempRow.appendChild(powerTile);
     if (tempRow.children.length > 0) { wrap.appendChild(tempRow); return wrap; }
     return null;
   }
@@ -477,6 +480,7 @@ class PrinterCardV2 extends HTMLElement {
       this._buildTile(this._config.print_progress_entity, "mdi:percent", "orange"),
       this._buildTile(this._config.bed_temp_entity, "mdi:radiator", "orange"),
       this._buildTile(this._config.nozzle_temp_entity, "mdi:printer-3d-nozzle-heat", "orange"),
+      this._buildTile(this._config.power_sensor_entity, "mdi:lightning-bolt", "yellow"),
       this._buildTile(this._config.print_time_entity, "mdi:clock-outline", "orange"),
       this._buildTile(this._config.print_time_left_entity, "mdi:clock-end", "orange"),
       this._buildTile(this._config.eta_entity, "mdi:clock-check-outline", "orange"),
