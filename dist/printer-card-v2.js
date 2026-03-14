@@ -357,20 +357,10 @@ class PrinterCardV2 extends HTMLElement {
     const wrap = document.createElement("div");
     wrap.className = "camera-area";
 
-    const imgUrl = this._getPrinterImage();
     const camId = this._config.camera_entity;
     const token = camId && this._hass ? this._hass.states[camId]?.attributes?.access_token : null;
 
-    if (imgUrl) {
-      // Static printer image configured — show it, no stream needed
-      const img = document.createElement("img");
-      img.className = "camera-img printer-custom-img";
-      img.src = imgUrl;
-      img.alt = "Drucker";
-      wrap.appendChild(img);
-      wrap.onclick = () => this._showLightbox(imgUrl, false);
-
-    } else if (camId && token) {
+    if (camId && token) {
       // ── Live stream — try MJPEG first ──────────────────────
       // /api/camera_proxy_stream delivers a multipart/x-mixed-replace MJPEG
       // stream which browsers display natively inside an <img> tag.
