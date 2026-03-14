@@ -314,9 +314,11 @@ class PrinterCardV2 extends HTMLElement {
       powerWrap.className = "power-wrap";
       powerWrap.innerHTML = `<span class="power-label">POWER</span>`;
       powerWrap.appendChild(this._makeIconButton("mdi:power", "btn-power-on", "power-on"));
+      wrap.appendChild(text);
       wrap.appendChild(powerWrap);
+    } else {
+      wrap.appendChild(text);
     }
-    wrap.appendChild(text);
     return wrap;
   }
 
