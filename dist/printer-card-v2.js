@@ -477,13 +477,13 @@ class PrinterCardV2 extends HTMLElement {
     grid.className = "sensor-grid-2";
     [
       this._buildLayerTile(),
-      this._buildTile(this._config.print_progress_entity, "mdi:percent", "orange"),
-      this._buildTile(this._config.bed_temp_entity, "mdi:radiator", "orange"),
-      this._buildTile(this._config.nozzle_temp_entity, "mdi:printer-3d-nozzle-heat", "orange"),
+      this._buildTile(this._config.print_progress_entity, "mdi:percent"),
+      this._buildTile(this._config.bed_temp_entity, "mdi:radiator"),
+      this._buildTile(this._config.nozzle_temp_entity, "mdi:printer-3d-nozzle-heat"),
       this._buildTile(this._config.power_sensor_entity, "mdi:lightning-bolt", "yellow"),
-      this._buildTile(this._config.print_time_entity, "mdi:clock-outline", "orange"),
-      this._buildTile(this._config.print_time_left_entity, "mdi:clock-end", "orange"),
-      this._buildTile(this._config.eta_entity, "mdi:clock-check-outline", "orange"),
+      this._buildTile(this._config.print_time_entity, "mdi:clock-outline"),
+      this._buildTile(this._config.print_time_left_entity, "mdi:clock-end"),
+      this._buildTile(this._config.eta_entity, "mdi:clock-check-outline"),
     ].forEach(t => { if (t) grid.appendChild(t); });
     if (grid.children.length > 0) { sensorsWrap.appendChild(grid); wrap.appendChild(sensorsWrap); }
 
