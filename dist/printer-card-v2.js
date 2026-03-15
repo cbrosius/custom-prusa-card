@@ -433,10 +433,8 @@ class PrinterCardV2 extends HTMLElement {
     wrap.appendChild(img);
     this._streamMode = "mjpeg";
 
-    wrap.onclick = () => {
-      const snapUrl = `/api/camera_proxy/${camId}${tokenParam}&t=${Date.now()}`;
-      this._showLightbox(snapUrl, false);
-    };
+    // MJPEG stream is displayable in an <img> — open the live stream, not a snapshot
+    wrap.onclick = () => this._showLightbox(mjpegUrl, false);
 
     const live = document.createElement("div");
     live.className = "live-badge";
@@ -462,6 +460,11 @@ class PrinterCardV2 extends HTMLElement {
       const img = document.createElement("img");
       img.className = "camera-img"; img.alt = "Kamera"; img.src = snapUrl;
       wrap.insertBefore(img, wrap.querySelector(".live-badge"));
+      // In poll mode open a fresh snapshot in the lightbox
+      wrap.onclick = () => {
+        const freshSnap = `/api/camera_proxy/${camId}${tokenParam}&t=${Date.now()}`;
+        this._showLightbox(freshSnap, false);
+      };
       this._startPoll();
     };
 
