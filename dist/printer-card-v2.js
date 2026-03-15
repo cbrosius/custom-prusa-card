@@ -109,12 +109,6 @@ class PrinterCardV2 extends HTMLElement {
     }
   }
 
-  // Returns true only when rendered inside the visual editor preview pane.
-  // In dashboard edit mode the card is wrapped in HUI-CARD-EDIT-MODE — we walk
-  // up the shadow-piercing host chain to detect that and exclude it.
-  // Visual editor preview: card sits inside HUI-DIALOG-EDIT-CARD.
-  // Dashboard edit mode: card sits inside HUI-CARD-EDIT-MODE (but NOT HUI-DIALOG-EDIT-CARD).
-  // Normal production: neither present.
   get _showAllStates() {
     let el = this;
     while (el) {
@@ -138,7 +132,6 @@ class PrinterCardV2 extends HTMLElement {
     this._hass = hass;
     const status = this._status();
     const showAll = this._showAllStates;
-    // Re-render if either the printer status or the preview/edit context changed
     if (status !== this._lastStatus || showAll !== this._lastShowAll) {
       this._lastStatus = status;
       this._lastShowAll = showAll;
@@ -149,13 +142,11 @@ class PrinterCardV2 extends HTMLElement {
   }
 
   connectedCallback() {
-    // Re-render once attached so _showAllStates can walk the real DOM
     this._render();
   }
 
   disconnectedCallback() { this._stopPoll(); }
 
-  // ── Polling fallback ──────────────────────────────────────
   _startPoll() {
     if (this._pollInterval) return;
     this._pollInterval = setInterval(() => this._pollSnapshot(), 5000);
@@ -177,7 +168,6 @@ class PrinterCardV2 extends HTMLElement {
     pre.src = src;
   }
 
-  // ── Printer image URL resolver ────────────────────────────
   _getPrinterImage() {
     const img = this._config.printer_image;
     if (!img) return null;
@@ -191,7 +181,6 @@ class PrinterCardV2 extends HTMLElement {
     return null;
   }
 
-  // ── Status detection ──────────────────────────────────────
   _status() {
     if (!this._config.printer_status_entity || !this._hass) return "unavailable";
     const stateObj = this._hass.states[this._config.printer_status_entity];
@@ -202,7 +191,6 @@ class PrinterCardV2 extends HTMLElement {
     return "idle";
   }
 
-  // ── Propagate hass to native HA child elements ────────────
   _propagateHass() {
     if (!this.shadowRoot) return;
     this.shadowRoot.querySelectorAll(
@@ -214,9 +202,6 @@ class PrinterCardV2 extends HTMLElement {
     this._updateHeaderSensorStrip();
   }
 
-  // ── Live-update header sensor strip values ────────────────
-  // FIX 2: items array must match exactly what _buildHeaderSensorStrip() renders
-  // (bed + nozzle only — power is shown in the subtitle, not in the strip)
   _updateHeaderSensorStrip() {
     const strip = this.shadowRoot.querySelector(".header-sensor-strip");
     if (!strip) return;
@@ -292,7 +277,6 @@ class PrinterCardV2 extends HTMLElement {
     lb.classList.add("active");
   }
 
-  // ── Full structural render ────────────────────────────────
   _render() {
     if (!this._hass) return;
     const sr = this.shadowRoot;
@@ -313,7 +297,6 @@ class PrinterCardV2 extends HTMLElement {
     this._propagateHass();
   }
 
-  // ── Preview: all three states stacked ────────────────────
   _renderPreview(sr) {
     const views = [
       { label: "Unavailable", build: () => {
@@ -365,7 +348,6 @@ class PrinterCardV2 extends HTMLElement {
     sr.appendChild(wrapper);
   }
 
-  // ── Normal single-state render ────────────────────────────
   _renderNormal(sr) {
     const status = this._lastStatus || this._status();
     const card = document.createElement("ha-card");
@@ -399,7 +381,6 @@ class PrinterCardV2 extends HTMLElement {
     }
   }
 
-  // ── Build: Unavailable ────────────────────────────────────
   _buildUnavail() {
     const wrap = document.createElement("div");
     wrap.className = "view-unavail";
@@ -427,7 +408,6 @@ class PrinterCardV2 extends HTMLElement {
     return wrap;
   }
 
-  // ── Build: Header sensor strip (printing only) ────────────
   _buildHeaderSensorStrip() {
     const items = [
       { label: "BED",   id: this._config.bed_temp_entity },
@@ -468,7 +448,6 @@ class PrinterCardV2 extends HTMLElement {
     return strip;
   }
 
-  // ── Build: Header (idle / printing) ──────────────────────
   _buildHeader(status) {
     const wrap = document.createElement("div");
     wrap.className = "view-unavail";
@@ -488,7 +467,6 @@ class PrinterCardV2 extends HTMLElement {
       ? this._hass.states[statusEntity].state
       : (status === "printing" ? "Printing" : "Idle");
 
-    // Power value shown in subtitle only — NOT injected into the sensor strip
     let displayStatus = realStatus;
     if (this._config.power_sensor_entity && this._hass?.states[this._config.power_sensor_entity]) {
       const powerState = this._hass.states[this._config.power_sensor_entity];
@@ -504,11 +482,9 @@ class PrinterCardV2 extends HTMLElement {
     wrap.appendChild(text);
 
     if (status === "printing") {
-      // Show BED + NOZ strip on the right during printing
       const strip = this._buildHeaderSensorStrip();
       if (strip) wrap.appendChild(strip);
     } else {
-      // Show power-off button when idle
       const powerWrap = document.createElement("div");
       powerWrap.className = "power-wrap";
       powerWrap.innerHTML = `<span class="power-label">POWER OFF -></span>`;
@@ -519,7 +495,6 @@ class PrinterCardV2 extends HTMLElement {
     return wrap;
   }
 
-  // ── Build: Camera area ────────────────────────────────────
   _buildCameraArea() {
     this._stopPoll();
 
@@ -546,7 +521,6 @@ class PrinterCardV2 extends HTMLElement {
     wrap.appendChild(img);
     this._streamMode = "mjpeg";
 
-    // MJPEG stream is displayable in an <img> — open the live stream, not a snapshot
     wrap.addEventListener("click", () => this._showLightbox(mjpegUrl, false), { passive: true });
 
     const live = document.createElement("div");
@@ -573,7 +547,6 @@ class PrinterCardV2 extends HTMLElement {
       const img = document.createElement("img");
       img.className = "camera-img"; img.alt = "Kamera"; img.src = snapUrl;
       wrap.insertBefore(img, wrap.querySelector(".live-badge"));
-      // In poll mode open a fresh snapshot in the lightbox
       wrap.addEventListener("click", () => {
         const freshSnap = `/api/camera_proxy/${camId}${tokenParam}&t=${Date.now()}`;
         this._showLightbox(freshSnap, false);
@@ -594,7 +567,6 @@ class PrinterCardV2 extends HTMLElement {
     return d;
   }
 
-  // ── Build: Idle bottom ────────────────────────────────────
   _buildIdleBottom() {
     const wrap = document.createElement("div");
     wrap.className = "idle-bottom";
@@ -606,7 +578,6 @@ class PrinterCardV2 extends HTMLElement {
     if (bedTile) tempRow.appendChild(bedTile);
     if (nozzleTile) tempRow.appendChild(nozzleTile);
     if (tempRow.children.length > 0) {
-      // Set column count to match actual tile count so tiles fill the full row
       tempRow.style.gridTemplateColumns = `repeat(${tempRow.children.length}, 1fr)`;
       wrap.appendChild(tempRow);
       return wrap;
@@ -614,7 +585,6 @@ class PrinterCardV2 extends HTMLElement {
     return null;
   }
 
-  // ── Build: Printing bottom ────────────────────────────────
   _buildPrintingBottom() {
     const wrap = document.createElement("div");
 
@@ -693,7 +663,6 @@ class PrinterCardV2 extends HTMLElement {
     sensorsWrap.className = "print-sensors";
     const grid = document.createElement("div");
     grid.className = "sensor-grid-2";
-    // show_tile_* defaults to true when undefined (opt-out model)
     const show = (flag) => this._config[flag] !== false;
     [
       show("show_tile_layer")     ? this._buildLayerTile() : null,
@@ -710,7 +679,6 @@ class PrinterCardV2 extends HTMLElement {
     return wrap;
   }
 
-  // ── hui-tile-card factory ─────────────────────────────────
   _buildTile(entityId, fallbackIcon, color) {
     if (!entityId) return null;
     const wrapper = document.createElement("div");
@@ -726,7 +694,6 @@ class PrinterCardV2 extends HTMLElement {
     return wrapper;
   }
 
-  // ── Mushroom layer tile ───────────────────────────────────
   _buildLayerTile() {
     const curId = this._config.current_layer_entity;
     if (!curId) return null;
@@ -757,7 +724,6 @@ class PrinterCardV2 extends HTMLElement {
     return tile;
   }
 
-  // ── Time column ───────────────────────────────────────────
   _buildTimeCol(label, entityId, accent, fallbackValue) {
     const wrap = document.createElement("div");
     wrap.style.textAlign = accent ? "right" : "left";
@@ -776,7 +742,6 @@ class PrinterCardV2 extends HTMLElement {
     return wrap;
   }
 
-  // ── Layer info helper ─────────────────────────────────────
   _getLayerInfo() {
     const curId = this._config.current_layer_entity;
     const totId = this._config.total_layers_entity;
@@ -789,7 +754,6 @@ class PrinterCardV2 extends HTMLElement {
     return `${cur} / ${tot}`;
   }
 
-  // ── ha-icon-button factory ────────────────────────────────
   _makeIconButton(icon, cssClass, action) {
     const btn = document.createElement("ha-icon-button");
     btn.className = `cam-action-btn ${cssClass}`; btn.dataset.action = action;
@@ -800,7 +764,7 @@ class PrinterCardV2 extends HTMLElement {
   }
 
   _pct() {
-    if (this._showAllStates) return 63; // stub for preview
+    if (this._showAllStates) return 63;
     const id = this._config.print_progress_entity;
     if (!id || !this._hass) return 0;
     return Math.min(parseFloat(this._hass.states[id]?.state) || 0, 100);
@@ -815,18 +779,13 @@ class PrinterCardV2 extends HTMLElement {
 
   getCardSize() { return 4; }
 
-  // ── CSS ───────────────────────────────────────────────────
-  // ── Accent color resolver ─────────────────────────────────────
-  // color_rgb selector stores value as [R, G, B] array.
-  // Falls back gracefully for legacy CSS strings or unset values.
   _accentColor() {
     const v = this._config.accent_color;
     if (!v) return "#ff6d00";
     if (Array.isArray(v) && v.length === 3) return `rgb(${v[0]},${v[1]},${v[2]})`;
-    return v; // legacy CSS string fallback
+    return v;
   }
 
-  // ── CSS ─────────────────────────────────────────────────────
   _css() {
     const accent = this._accentColor();
     return `
@@ -928,6 +887,19 @@ class PrinterCardV2 extends HTMLElement {
     .tile-blue hui-tile-card .primary, .tile-blue hui-tile-card ha-tile-info .primary { color: white !important; }
     .tile-blue hui-tile-card .state, .tile-blue hui-tile-card .value,
     .tile-blue hui-tile-card .secondary, .tile-blue hui-tile-card ha-tile-info .secondary { color: ${accent} !important; }
+
+    /* ── TILE ICON ACCENT COLOR ───────────────────────────── */
+    .tile-wrap hui-tile-card {
+      --tile-color: ${accent};
+      --state-icon-color: ${accent};
+    }
+    .tile-wrap hui-tile-card ha-tile-icon,
+    .tile-wrap hui-tile-card ha-tile-icon ha-state-icon,
+    .tile-wrap hui-tile-card ha-tile-icon ha-icon,
+    .tile-wrap hui-tile-card ha-tile-icon .icon {
+      color: ${accent} !important;
+      --mdc-icon-color: ${accent};
+    }
 
     .mushroom-layer-tile { margin: 0; --ha-card-border-radius: 12px; --ha-card-box-shadow: none; --mush-icon-size: 40px; --mush-spacing: 12px; }
     .mushroom-layer-tile ha-card { background: transparent !important; border: none !important; box-shadow: none !important; }
