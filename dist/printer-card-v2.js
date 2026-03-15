@@ -20,8 +20,7 @@ class PrinterCardV2Editor extends HTMLElement {
         name: "printer_image", label: "Drucker-Bild",
         selector: { media: { accept: ["image/*"], clearable: true, image_upload: true, hide_content_type: true } }
       },
-      // FIX 1: use "text" selector — ha-form does not support color picker natively
-      { name: "accent_color", label: "Akzentfarbe (während Drucken) — CSS-Farbe, z.B. #ff6d00", selector: { text: {} } },
+      { name: "accent_color", label: "Akzentfarbe (während Drucken)", selector: { color_rgb: {} } },
       { name: "camera_entity", label: "Kamera", selector: { entity: { domain: "camera" } } },
       { name: "thumbnail_entity", label: "Modell-Vorschaubild (Sensor/Entity)", selector: { entity: {} } },
       { name: "job_name_entity", label: "Dateiname / Job-Name Sensor", selector: { entity: { domain: "sensor" } } },
@@ -487,10 +486,15 @@ class PrinterCardV2 extends HTMLElement {
     tempRow.className = "temp-row";
     const bedTile = this._buildTile(this._config.bed_temp_entity, "mdi:radiator");
     const nozzleTile = this._buildTile(this._config.nozzle_temp_entity, "mdi:printer-3d-nozzle-heat");
-      
+
     if (bedTile) tempRow.appendChild(bedTile);
     if (nozzleTile) tempRow.appendChild(nozzleTile);
-    if (tempRow.children.length > 0) { wrap.appendChild(tempRow); return wrap; }
+    if (tempRow.children.length > 0) {
+      // Set column count to match actual tile count so tiles fill the full row
+      tempRow.style.gridTemplateColumns = `repeat(${tempRow.children.length}, 1fr)`;
+      wrap.appendChild(tempRow);
+      return wrap;
+    }
     return null;
   }
 
@@ -536,7 +540,7 @@ class PrinterCardV2 extends HTMLElement {
       timeRow.appendChild(this._buildTimeCol("ELAPSED", elapsedId, false));
     } else {
       const layerInfo = this._getLayerInfo();
-      timeRow.appendChild(this._buildTimeCol("LAYER", null, false, layerInfo));
+      timeRow.appendChild(this._buildTimeCol("LAYER", null, true, layerInfo));
     }
     timeRow.appendChild(this._buildTimeCol("REMAINING", this._config.print_time_left_entity, true));
     timeRow.appendChild(this._buildTimeCol("ETA", this._config.eta_entity, true));
@@ -687,10 +691,21 @@ class PrinterCardV2 extends HTMLElement {
   getCardSize() { return 4; }
 
   // ── CSS ───────────────────────────────────────────────────
+  // ── Accent color resolver ─────────────────────────────────────
+  // color_rgb selector stores value as [R, G, B] array.
+  // Falls back gracefully for legacy CSS strings or unset values.
+  _accentColor() {
+    const v = this._config.accent_color;
+    if (!v) return "#ff6d00";
+    if (Array.isArray(v) && v.length === 3) return `rgb(${v[0]},${v[1]},${v[2]})`;
+    return v; // legacy CSS string fallback
+  }
+
+  // ── CSS ─────────────────────────────────────────────────────
   _css() {
-    const accent = this._config.accent_color || "#ff6d00";
+    const accent = this._accentColor();
     return `
-    :host { display: block; }
+    :host { display: block; --accent: ${accent}; }
     * { box-sizing: border-box; }
 
     ha-card.printer-card-v2 { overflow: hidden; border-radius: var(--ha-card-border-radius, 16px); padding: 0; }
@@ -791,10 +806,12 @@ class PrinterCardV2 extends HTMLElement {
 
     .mushroom-layer-tile { margin: 0; --ha-card-border-radius: 12px; --ha-card-box-shadow: none; --mush-icon-size: 40px; --mush-spacing: 12px; }
     .mushroom-layer-tile ha-card { background: transparent !important; border: none !important; box-shadow: none !important; }
+    .mushroom-layer-tile { --mush-rgb-state-color: ${accent}; }
+    .mushroom-layer-tile [slot="secondary"], .mushroom-layer-tile .secondary { color: ${accent} !important; }
 
     /* ── IDLE BOTTOM ──────────────────────────────────────── */
     .idle-bottom { padding: 12px 14px 14px; }
-    .temp-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .temp-row { display: grid; gap: 8px; }
 
     /* ── PRINTING BOTTOM ──────────────────────────────────── */
     .print-info-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px 0; }
