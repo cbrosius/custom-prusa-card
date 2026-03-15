@@ -191,6 +191,8 @@ class PrinterCardV2 extends HTMLElement {
   _updateProgressBar() {
     const fill = this.shadowRoot.querySelector(".progress-fill");
     if (fill) fill.style.width = this._pct() + "%";
+    const pct = this.shadowRoot.querySelector(".progress-pct");
+    if (pct) pct.textContent = this._pct() + "%";
   }
 
   _showLightbox(src, isVideo) {
@@ -283,7 +285,7 @@ class PrinterCardV2 extends HTMLElement {
     text.innerHTML = `<div class="unavail-name">${this._config.name || "3D-Drucker"}</div><div class="unavail-sub">${realStatus}</div>`;
     const powerWrap = document.createElement("div");
     powerWrap.className = "power-wrap";
-    powerWrap.innerHTML = `<span class="power-label">POWER</span>`;
+    powerWrap.innerHTML = `<span class="power-label">POWER ON -></span>`;
     powerWrap.appendChild(this._makeIconButton("mdi:power", "btn-power-on", "power-on"));
     wrap.appendChild(text);
     wrap.appendChild(powerWrap);
@@ -467,6 +469,19 @@ class PrinterCardV2 extends HTMLElement {
 
     const progWrap = document.createElement("div");
     progWrap.className = "progress-wrap";
+
+    const progHeader = document.createElement("div");
+    progHeader.className = "progress-header";
+    const progLabel = document.createElement("span");
+    progLabel.className = "progress-label";
+    progLabel.textContent = "Progress";
+    const progPct = document.createElement("span");
+    progPct.className = "progress-pct";
+    progPct.textContent = this._pct() + "%";
+    progHeader.appendChild(progLabel);
+    progHeader.appendChild(progPct);
+    progWrap.appendChild(progHeader);
+
     const track = document.createElement("div"); track.className = "progress-track";
     const fill = document.createElement("div"); fill.className = "progress-fill";
     fill.style.width = this._pct() + "%";
@@ -736,6 +751,9 @@ class PrinterCardV2 extends HTMLElement {
     .t-value { font-size: .82rem; font-weight: 600; margin-top: 1px; white-space: nowrap; }
     .t-value.remaining { color: #ff6d00; }
     .progress-wrap { padding: 10px 14px 0; }
+    .progress-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+    .progress-label { font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--secondary-text-color); }
+    .progress-pct { font-size: .82rem; font-weight: 700; color: #ff6d00; }
     .progress-track { height: 6px; border-radius: 6px; background: var(--secondary-background-color, rgba(0,0,0,.08)); overflow: hidden; }
     .progress-fill { height: 100%; border-radius: 6px; background: linear-gradient(90deg,#ff6d00,#ff9800); transition: width .4s ease; }
     .print-sensors { padding: 10px 14px 14px; }
