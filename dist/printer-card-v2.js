@@ -26,7 +26,7 @@ class PrinterCardV2Editor extends HTMLElement {
         schema: [
           { name: "accent_color", label: "Akzentfarbe (während Drucken)", selector: { color_rgb: {} } },
           { name: "job_name_entity", label: "Dateiname / Job-Name Sensor", selector: { entity: { domain: "sensor" } } },
-          { name: "thumbnail_entity", label: "Modell-Vorschaubild (Sensor/Entity)", selector: { entity: {} } },
+          { name: "thumbnail_entity", label: "Modell-Vorschaubild (Sensor/Entity)", selector: { entity: { domain: "camera","image" : any } } },
           { name: "print_progress_entity", label: "Druckfortschritt (%) Sensor", selector: { entity: { domain: "sensor" } } },
           { name: "bed_temp_entity", label: "Druckbett-Temperatur Sensor", selector: { entity: { domain: "sensor" } } },
           { name: "nozzle_temp_entity", label: "Nozzle-Temperatur Sensor", selector: { entity: { domain: "sensor" } } },
@@ -101,8 +101,16 @@ class PrinterCardV2 extends HTMLElement {
   }
 
   static getConfigElement() { return document.createElement("printer-card-v2-editor"); }
+
   static getStubConfig() {
-    return { name: "my3D-Printer", printer_status_entity: "", camera_entity: "", power_switch_entity: "", job_name_entity: "" };
+    return { 
+      name: "my3D-Printer", 
+      printer_status_entity: "", 
+      camera_entity: "", 
+      power_switch_entity: "", 
+      job_name_entity: "", 
+      accent_color: [175, 100, 0], 
+    };
   }
 
   set preview(value) {
