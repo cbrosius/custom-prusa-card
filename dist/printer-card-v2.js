@@ -20,20 +20,30 @@ class PrinterCardV2Editor extends HTMLElement {
         name: "printer_image", label: "Drucker-Bild",
         selector: { media: { accept: ["image/*"], clearable: true, image_upload: true, hide_content_type: true } }
       },
-      { name: "accent_color", label: "Akzentfarbe (während Drucken)", selector: { color_rgb: {} } },
       { name: "camera_entity", label: "Kamera", selector: { entity: { domain: "camera" } } },
-      { name: "thumbnail_entity", label: "Modell-Vorschaubild (Sensor/Entity)", selector: { entity: {} } },
-      { name: "job_name_entity", label: "Dateiname / Job-Name Sensor", selector: { entity: { domain: "sensor" } } },
-      { name: "bed_temp_entity", label: "Druckbett-Temperatur Sensor", selector: { entity: { domain: "sensor" } } },
-      { name: "nozzle_temp_entity", label: "Nozzle-Temperatur Sensor", selector: { entity: { domain: "sensor" } } },
-      { name: "current_layer_entity", label: "Aktueller Layer Sensor", selector: { entity: { domain: "sensor" } } },
-      { name: "total_layers_entity", label: "Gesamt-Layer Sensor", selector: { entity: { domain: "sensor" } } },
-      { name: "print_progress_entity", label: "Druckfortschritt (%) Sensor", selector: { entity: { domain: "sensor" } } },
-      { name: "print_time_entity", label: "Bisherige Druckzeit Sensor", selector: { entity: { domain: "sensor" } } },
-      { name: "print_time_left_entity", label: "Restlaufzeit Sensor", selector: { entity: { domain: "sensor" } } },
-      { name: "eta_entity", label: "Fertigstellung (ETA) Sensor", selector: { entity: { domain: "sensor" } } },
-      { name: "power_switch_entity", label: "Spannungsversorgungs-Schalter", selector: { entity: { domain: ["switch", "input_boolean"] } } },
-      { name: "power_sensor_entity", label: "Leistungsaufnahme (W) Sensor", selector: { entity: { domain: "sensor" } } },
+      {
+        type: "expandable", title: "Druckdetail-Einstellungen", icon: "mdi:view-grid",
+        schema: [
+          { name: "accent_color", label: "Akzentfarbe (während Drucken)", selector: { color_rgb: {} } },
+          { name: "job_name_entity", label: "Dateiname / Job-Name Sensor", selector: { entity: { domain: "sensor" } } },
+          { name: "thumbnail_entity", label: "Modell-Vorschaubild (Sensor/Entity)", selector: { entity: {} } },
+          { name: "bed_temp_entity", label: "Druckbett-Temperatur Sensor", selector: { entity: { domain: "sensor" } } },
+          { name: "nozzle_temp_entity", label: "Nozzle-Temperatur Sensor", selector: { entity: { domain: "sensor" } } },
+          { name: "current_layer_entity", label: "Aktueller Layer Sensor", selector: { entity: { domain: "sensor" } } },
+          { name: "total_layers_entity", label: "Gesamt-Layer Sensor", selector: { entity: { domain: "sensor" } } },
+          { name: "print_progress_entity", label: "Druckfortschritt (%) Sensor", selector: { entity: { domain: "sensor" } } },
+          { name: "print_time_entity", label: "Bisherige Druckzeit Sensor", selector: { entity: { domain: "sensor" } } },
+          { name: "print_time_left_entity", label: "Restlaufzeit Sensor", selector: { entity: { domain: "sensor" } } },
+          { name: "eta_entity", label: "Fertigstellung (ETA) Sensor", selector: { entity: { domain: "sensor" } } },
+        ]
+      },
+      {
+        type: "expandable", title: "Power-Control", icon: "mdi:view-grid",
+        schema: [
+          { name: "power_switch_entity", label: "Spannungsversorgungs-Schalter", selector: { entity: { domain: ["switch", "input_boolean"] } } },
+          { name: "power_sensor_entity", label: "Leistungsaufnahme (W) Sensor", selector: { entity: { domain: "sensor" } } },
+        ]
+      },
       {
         type: "expandable", title: "Kacheln während Druck anzeigen", icon: "mdi:view-grid",
         schema: [
