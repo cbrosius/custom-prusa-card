@@ -113,14 +113,15 @@ class PrinterCardV2 extends HTMLElement {
   // In dashboard edit mode the card is wrapped in HUI-CARD-EDIT-MODE — we walk
   // up the shadow-piercing host chain to detect that and exclude it.
   get _showAllStates() {
+    const chain = [];
     let el = this;
     while (el) {
-      if (el.tagName === "HUI-CARD-EDIT-MODE") return false;
+      if (el.tagName) chain.push(el.tagName);
       el = el.parentElement ||
            (el.getRootNode && el.getRootNode() !== el ? el.getRootNode().host : null);
     }
-    // Not inside HUI-CARD-EDIT-MODE — must be the visual editor preview
-    return true;
+    console.log("[PrinterCardV2] _showAllStates chain:", chain.join(" → "));
+    return false; // always normal for now
   }
 
 
