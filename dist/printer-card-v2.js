@@ -40,7 +40,7 @@ class PrinterCardV2Editor extends HTMLElement {
         type: "expandable", title: "Power-Control", icon: "mdi:view-grid",
         schema: [
           { name: "power_switch_entity", label: "Spannungsversorgungs-Schalter", selector: { entity: { domain: ["switch", "input_boolean"] } } },
-          { name: "power_sensor_entity", label: "Leistungsaufnahme (W) Sensor", selector: { entity: { domain: "sensor" } } },
+          { name: "power_sensor_entity", label: "Leistungsaufnahme (W) Sensor", selector: { entity: { domain: "sensor", domain_class: "power" } } },
         ]
       },
       {
