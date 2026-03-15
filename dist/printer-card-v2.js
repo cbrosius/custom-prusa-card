@@ -135,8 +135,11 @@ class PrinterCardV2 extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
     const status = this._status();
-    if (status !== this._lastStatus) {
+    const showAll = this._showAllStates;
+    // Re-render if either the printer status or the preview/edit context changed
+    if (status !== this._lastStatus || showAll !== this._lastShowAll) {
       this._lastStatus = status;
+      this._lastShowAll = showAll;
       this._render();
     } else {
       this._propagateHass();
