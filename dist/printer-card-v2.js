@@ -161,6 +161,7 @@ class PrinterCardV2 extends HTMLElement {
     this._updateHeaderSensorStrip();
   }
 
+  // ── Live-update header sensor strip values ────────────────
   _updateHeaderSensorStrip() {
     const strip = this.shadowRoot.querySelector(".header-sensor-strip");
     if (!strip) return;
@@ -311,6 +312,7 @@ class PrinterCardV2 extends HTMLElement {
     return wrap;
   }
 
+  // ── Build: Header sensor strip (printing only) ────────────
   _buildHeaderSensorStrip() {
     const items = [
       { label: "POWER", id: this._config.power_sensor_entity },
@@ -342,8 +344,7 @@ class PrinterCardV2 extends HTMLElement {
 
       const value = document.createElement("div");
       value.className = "header-sensor-value";
-      value.textContent = (val !== "unavailable" && val !== "unknown")
-        ? `${val}${unit}` : "—";
+      value.textContent = (val !== "unavailable" && val !== "unknown") ? `${val}${unit}` : "—";
 
       col.appendChild(label);
       col.appendChild(value);
@@ -369,24 +370,26 @@ class PrinterCardV2 extends HTMLElement {
       wrap.appendChild(icon);
     }
     const statusEntity = this._config.printer_status_entity;
-    const realStatus = (statusEntity && this._hass?.states[statusEntity]) ? this._hass.states[statusEntity].state : (status === "printing" ? "Printing" : "Idle");
+    const realStatus = (statusEntity && this._hass?.states[statusEntity])
+      ? this._hass.states[statusEntity].state
+      : (status === "printing" ? "Printing" : "Idle");
     const text = document.createElement("div");
     text.innerHTML = `<div class="unavail-name">${this._config.name || "3D-Drucker"}</div><div class="unavail-sub">${realStatus}</div>`;
-     if (status !== "printing") {
-       const powerWrap = document.createElement("div");
-       powerWrap.className = "power-wrap";
-       if (status === "idle") {
-         powerWrap.innerHTML = `<span class="power-label">POWER OFF -></span>`;
-         powerWrap.appendChild(this._makeIconButton("mdi:power", "btn-power-off", "power-off"));
-       } else {
-         powerWrap.innerHTML = `<span class="power-label">POWER ON -></span>`;
-         powerWrap.appendChild(this._makeIconButton("mdi:power", "btn-power-on", "power-on"));
-       }
-       wrap.appendChild(text);
-       wrap.appendChild(powerWrap);
-     } else {
-       wrap.appendChild(text);
-     }
+    wrap.appendChild(text);
+
+    if (status === "printing") {
+      // Show live sensor strip on the right during printing
+      const strip = this._buildHeaderSensorStrip();
+      if (strip) wrap.appendChild(strip);
+    } else {
+      // Show power-off button when idle
+      const powerWrap = document.createElement("div");
+      powerWrap.className = "power-wrap";
+      powerWrap.innerHTML = `<span class="power-label">POWER OFF -></span>`;
+      powerWrap.appendChild(this._makeIconButton("mdi:power", "btn-power-off", "power-off"));
+      wrap.appendChild(powerWrap);
+    }
+
     return wrap;
   }
 
@@ -530,7 +533,6 @@ class PrinterCardV2 extends HTMLElement {
 
     const progWrap = document.createElement("div");
     progWrap.className = "progress-wrap";
-
     const progHeader = document.createElement("div");
     progHeader.className = "progress-header";
     const progLabel = document.createElement("span");
@@ -542,7 +544,6 @@ class PrinterCardV2 extends HTMLElement {
     progHeader.appendChild(progLabel);
     progHeader.appendChild(progPct);
     progWrap.appendChild(progHeader);
-
     const track = document.createElement("div"); track.className = "progress-track";
     const fill = document.createElement("div"); fill.className = "progress-fill";
     fill.style.width = this._pct() + "%";
@@ -585,17 +586,11 @@ class PrinterCardV2 extends HTMLElement {
   }
 
   // ── hui-sensor-card factory ───────────────────────────────
-  // The graph SVG renders at 0x0 if hass is set before the card is
-  // attached to a laid-out DOM node. Fix:
-  //   1. Append card to wrapper immediately (gives it real dimensions)
-  //   2. Defer setConfig + hass via whenDefined so the element upgrade
-  //      callback has fired and the internal ResizeObserver can measure.
   _buildSensorCard(entityId, icon, color) {
     if (!entityId) return null;
     const wrapper = document.createElement("div");
     wrapper.className = `sensor-card-wrap sensor-${color}`;
     const card = document.createElement("hui-sensor-card");
-    // Attach first so layout dimensions are available when graph initialises
     wrapper.appendChild(card);
     this._tiles[entityId] = card;
 
@@ -617,8 +612,6 @@ class PrinterCardV2 extends HTMLElement {
   }
 
   // ── Mushroom layer tile ───────────────────────────────────
-  // Uses customElements.whenDefined() to safely defer setConfig
-  // until mushroom-template-card is actually registered by HACS.
   _buildLayerTile() {
     const curId = this._config.current_layer_entity;
     if (!curId) return null;
@@ -639,8 +632,6 @@ class PrinterCardV2 extends HTMLElement {
       entity: curId
     };
 
-    // Defer setConfig until the custom element is actually defined —
-    // avoids "tile.setConfig is not a function" when HACS loads late.
     customElements.whenDefined("mushroom-template-card").then(() => {
       if (typeof tile.setConfig === "function") {
         tile.setConfig(cfg);
@@ -737,41 +728,25 @@ class PrinterCardV2 extends HTMLElement {
 
     /* ── HEADER SENSOR STRIP ─────────────────────────────── */
     .header-sensor-strip {
-      display: flex;
-      align-items: stretch;
-      gap: 0;
-      margin-left: auto;
+      display: flex; align-items: stretch; gap: 0; margin-left: auto;
       background: var(--secondary-background-color, rgba(0,0,0,.05));
-      border-radius: 10px;
-      padding: 6px 4px;
-      flex-shrink: 0;
+      border-radius: 10px; padding: 6px 4px; flex-shrink: 0;
     }
     .header-sensor-col {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 0 10px;
-      min-width: 48px;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 0 10px; min-width: 48px;
     }
     .header-sensor-divider {
-      width: 1px;
-      background: var(--divider-color, rgba(128,128,128,.25));
-      align-self: stretch;
-      margin: 2px 0;
+      width: 1px; background: var(--divider-color, rgba(128,128,128,.25));
+      align-self: stretch; margin: 2px 0;
     }
     .header-sensor-label {
-      font-size: .6rem;
-      font-weight: 700;
-      letter-spacing: .07em;
-      text-transform: uppercase;
-      color: var(--secondary-text-color);
+      font-size: .6rem; font-weight: 700; letter-spacing: .07em;
+      text-transform: uppercase; color: var(--secondary-text-color);
     }
     .header-sensor-value {
-      font-size: .9rem;
-      font-weight: 700;
-      color: #ff6d00;
-      margin-top: 1px;
-      white-space: nowrap;
+      font-size: .9rem; font-weight: 700; color: #ff6d00;
+      margin-top: 1px; white-space: nowrap;
     }
 
     /* ── CAMERA ──────────────────────────────────────────── */
@@ -781,7 +756,6 @@ class PrinterCardV2 extends HTMLElement {
     }
     .view-unavail + .camera-area { margin-top: 2px; }
     .no-cam-divider { height: 1px; background: var(--divider-color, rgba(255,255,255,0.1)); }
-
     .camera-img {
       width: 100%; height: auto; display: block; object-fit: cover;
       aspect-ratio: 16/9; background: #111; margin: 0; padding: 0;
@@ -813,8 +787,8 @@ class PrinterCardV2 extends HTMLElement {
 
     /* ── BUTTONS ──────────────────────────────────────────── */
     .cam-action-btn { --mdc-icon-button-size: 40px; --mdc-icon-size: 20px; border-radius: 50%; }
-     .btn-power-on { background: rgba(76,175,80,.15); color: #4caf50; }
-     .btn-power-off { background: rgba(244,67,54,.15); color: #f44336; }
+    .btn-power-on  { background: rgba(76,175,80,.15); color: #4caf50; }
+    .btn-power-off { background: rgba(244,67,54,.15); color: #f44336; }
 
     /* ── TILES ────────────────────────────────────────────── */
     .tile-wrap { border-radius: 12px; overflow: hidden; position: relative; }
@@ -827,10 +801,10 @@ class PrinterCardV2 extends HTMLElement {
     .tile-blue hui-tile-card .state, .tile-blue hui-tile-card .value,
     .tile-blue hui-tile-card .secondary, .tile-blue hui-tile-card ha-tile-info .secondary { color: #2196f3 !important; }
 
-    /* ── SENSOR CARD ────────────────────────────────────────── */
+    /* ── SENSOR CARD ─────────────────────────────────────── */
     .sensor-card-wrap { border-radius: 12px; overflow: hidden; display: block; }
     .sensor-blue hui-sensor-card { --card-background: rgba(33,150,243,.08); --icon-color: #2196f3; }
-  
+
     .mushroom-layer-tile { margin: 0; --ha-card-border-radius: 12px; --ha-card-box-shadow: none; --mush-icon-size: 40px; --mush-spacing: 12px; }
     .mushroom-layer-tile ha-card { background: transparent !important; border: none !important; box-shadow: none !important; }
 
