@@ -251,31 +251,21 @@ class PrinterCardV2 extends HTMLElement {
   }
 
   _updateTimeValues() {
-    // Update ELAPSED ha-relative-time (update datetime in case state changed)
-    const elapsedRel = this.shadowRoot.querySelector(".t-relative-elapsed");
-    if (elapsedRel) {
-      const id = this._config.print_start_time;
-      if (id && this._hass?.states[id]) {
-        const state = this._hass.states[id].state;
-        if (state && state !== "unavailable" && state !== "unknown") {
-          elapsedRel.datetime = new Date(state);
-          elapsedRel.hass = this._hass;
-        }
-      }
-    }
+    const updateCompound = (wrapClass, entityId) => {
+      const wrap = this.shadowRoot.querySelector(`.${wrapClass}`);
+      if (!wrap) return;
+      if (!entityId || !this._hass?.states[entityId]) return;
+      const state = this._hass.states[entityId].state;
+      if (!state || state === "unavailable" || state === "unknown") return;
+      const date = new Date(state);
+      const timeSpan = wrap.querySelector(".t-time");
+      if (timeSpan) timeSpan.textContent = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const relTime = wrap.querySelector("ha-relative-time");
+      if (relTime) { relTime.datetime = date; relTime.hass = this._hass; }
+    };
 
-    // Update ETA ha-relative-time
-    const etaRel = this.shadowRoot.querySelector(".t-relative-eta");
-    if (etaRel) {
-      const id = this._config.eta_entity;
-      if (id && this._hass?.states[id]) {
-        const state = this._hass.states[id].state;
-        if (state && state !== "unavailable" && state !== "unknown") {
-          etaRel.datetime = new Date(state);
-          etaRel.hass = this._hass;
-        }
-      }
-    }
+    updateCompound("t-compound-elapsed", this._config.print_start_time);
+    updateCompound("t-compound-eta",     this._config.eta_entity);
   }
 
   _updateProgressBar() {
@@ -786,29 +776,40 @@ class PrinterCardV2 extends HTMLElement {
     const l = document.createElement("div"); l.className = "t-label"; l.textContent = label;
     wrap.appendChild(l);
 
-    // Use ha-relative-time for both START-TIME (print_start_time) and ETA
     const useRelativeTime = (label === "START-TIME" || label === "ETA");
 
     if (useRelativeTime && entityId && this._hass?.states[entityId]) {
       const state = this._hass.states[entityId].state;
       if (state && state !== "unavailable" && state !== "unknown") {
+        const date = new Date(state);
+        const timeStr = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+        const valueWrap = document.createElement("div");
+        valueWrap.className = "t-value t-value-compound accent" + (accent ? " remaining" : "");
+        valueWrap.classList.add(label === "START-TIME" ? "t-compound-elapsed" : "t-compound-eta");
+
+        const timeSpan = document.createElement("span");
+        timeSpan.className = "t-time";
+        timeSpan.textContent = timeStr;
+
         const relTime = document.createElement("ha-relative-time");
-        relTime.className = "t-value accent";
-        // Unique class for targeted updates in _updateTimeValues
-        relTime.classList.add(label === "START-TIME" ? "t-relative-elapsed" : "t-relative-eta");
-        if (accent) relTime.classList.add("remaining");
+        relTime.className = "t-rel-inline";
         relTime.hass = this._hass;
-        relTime.datetime = new Date(state);
-        relTime.capitalize = true;
-        wrap.appendChild(relTime);
+        relTime.datetime = date;
+        relTime.capitalize = false;
+
+        valueWrap.appendChild(timeSpan);
+        valueWrap.appendChild(document.createTextNode(" ("));
+        valueWrap.appendChild(relTime);
+        valueWrap.appendChild(document.createTextNode(")"));
+        wrap.appendChild(valueWrap);
         return wrap;
       }
     }
 
-    // Plain text fallback for REMAINING and when relative time isn't available
+    // Plain text fallback when entity unavailable or unknown
     const v = document.createElement("div");
     v.className = "t-value" + (accent ? " remaining" : "");
-    if (label === "REMAINING") v.classList.add("t-value-remaining");
 
     if (entityId && this._hass?.states[entityId]) {
       const state = this._hass.states[entityId].state;
@@ -1015,9 +1016,11 @@ class PrinterCardV2 extends HTMLElement {
     .t-label { font-size: .62rem; text-transform: uppercase; letter-spacing: .06em; color: var(--secondary-text-color); font-weight: 600; white-space: nowrap; }
     .t-value { font-size: .82rem; font-weight: 600; margin-top: 1px; white-space: nowrap; }
     .t-value.remaining { color: ${accent}; }
-    ha-relative-time { font-size: .82rem; font-weight: 600; margin-top: 1px; display: block; }
-    ha-relative-time.accent { color: ${accent}; }
-    ha-relative-time.remaining { color: ${accent}; }
+    .t-value-compound { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0; white-space: normal; }
+    .t-value-compound.accent { color: ${accent}; }
+    .t-value-compound.remaining { color: ${accent}; }
+    .t-time { font-weight: 700; }
+    ha-relative-time.t-rel-inline { display: inline; font-size: inherit; font-weight: inherit; color: inherit; }
     .progress-wrap { padding: 10px 14px 14px; }
     .progress-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
     .progress-label { font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: ${accent}; }
