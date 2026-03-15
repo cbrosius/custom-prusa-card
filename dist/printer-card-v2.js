@@ -95,12 +95,10 @@ class PrinterCardV2 extends HTMLElement {
     return { name: "my3D-Printer", printer_status_entity: "", camera_entity: "", power_switch_entity: "", job_name_entity: "" };
   }
 
-  // HA sets preview=true in both dashboard edit mode and the visual editor preview.
-  // HA sets editMode=true only in dashboard edit mode (card grid), NOT inside the
-  // visual editor panel. So _showAllStates = preview && !editMode.
   set preview(value) {
     if (this._preview !== value) {
       this._preview = value;
+      console.log("[PrinterCardV2] preview =", value, "| editMode =", this._editMode, "| isPanel =", this.isPanel);
       this._render();
     }
   }
@@ -108,6 +106,7 @@ class PrinterCardV2 extends HTMLElement {
   set editMode(value) {
     if (this._editMode !== value) {
       this._editMode = value;
+      console.log("[PrinterCardV2] editMode =", value, "| preview =", this._preview, "| isPanel =", this.isPanel);
       this._render();
     }
   }
