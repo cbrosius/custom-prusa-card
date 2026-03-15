@@ -20,7 +20,7 @@ class PrinterCardV2Editor extends HTMLElement {
         name: "printer_image", label: "Drucker-Bild",
         selector: { media: { accept: ["image/*"], clearable: true, image_upload: true, hide_content_type: true } }
       },
-      { name: "accent_color", label: "Akzentfarbe (währendDrucken)", selector: { color: {} } },
+      { name: "accent_color", label: "Akzentfarbe (währendDrucken)", selector: { color_rgb: {} } },
       { name: "camera_entity", label: "Kamera", selector: { entity: { domain: "camera" } } },
       { name: "thumbnail_entity", label: "Modell-Vorschaubild (Sensor/Entity)", selector: { entity: {} } },
       { name: "job_name_entity", label: "Dateiname / Job-Name Sensor", selector: { entity: { domain: "sensor" } } },
