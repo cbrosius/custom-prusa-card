@@ -317,9 +317,13 @@ class PrinterCardV2 extends HTMLElement {
         const card = document.createElement("ha-card");
         card.className = "printer-card-v2";
         card.appendChild(this._buildHeader("idle"));
-        const divider = document.createElement("div");
-        divider.className = "no-cam-divider";
-        card.appendChild(divider);
+        if (this._config.camera_entity) {
+          card.appendChild(this._buildCameraArea());
+        } else {
+          const divider = document.createElement("div");
+          divider.className = "no-cam-divider";
+          card.appendChild(divider);
+        }
         const bottom = this._buildIdleBottom();
         if (bottom) card.appendChild(bottom);
         return card;
@@ -328,9 +332,13 @@ class PrinterCardV2 extends HTMLElement {
         const card = document.createElement("ha-card");
         card.className = "printer-card-v2";
         card.appendChild(this._buildHeader("printing"));
-        const divider = document.createElement("div");
-        divider.className = "no-cam-divider";
-        card.appendChild(divider);
+        if (this._config.camera_entity) {
+          card.appendChild(this._buildCameraArea());
+        } else {
+          const divider = document.createElement("div");
+          divider.className = "no-cam-divider";
+          card.appendChild(divider);
+        }
         const bottom = this._buildPrintingBottom();
         if (bottom) card.appendChild(bottom);
         return card;
