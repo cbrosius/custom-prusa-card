@@ -229,7 +229,7 @@ class PrinterCardV2 extends HTMLElement {
 
     let displayStatus = realStatus;
     let powerValueAvailable = false;
-    if (this._config.power_sensor_entity && this._hass?.states[this._config.power_sensor_entity]) {
+    if (realStatus !== "unavailable" && this._config.power_sensor_entity && this._hass?.states[this._config.power_sensor_entity]) {
       const powerState = this._hass.states[this._config.power_sensor_entity];
       if (powerState.state !== "unavailable" && powerState.state !== "unknown") {
         const powerValue = powerState.state;
@@ -911,7 +911,7 @@ class PrinterCardV2 extends HTMLElement {
     .unavail-printer-image img { width: 100%; height: 100%; object-fit: contain; }
     .unavail-name { font-size: .95rem; font-weight: 600; }
     .unavail-sub  { font-size: .78rem; color: ${accent}; margin-top: 1px; }
-    .unavail-sub.sub-clickable { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 2px; }
+    .unavail-sub.sub-clickable { cursor: pointer; }
     .unavail-sub.sub-clickable:hover { opacity: 0.75; }
     .power-wrap   { display: flex; align-items: center; gap: 6px; margin-left: auto; }
     .power-label  { font-size: .72rem; font-weight: 600; letter-spacing: .06em;
