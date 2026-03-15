@@ -811,7 +811,7 @@ class PrinterCardV2 extends HTMLElement {
     .unavail-sub  { font-size: .78rem; color: ${accent}; margin-top: 1px; }
     .power-wrap   { display: flex; align-items: center; gap: 6px; margin-left: auto; }
     .power-label  { font-size: .72rem; font-weight: 600; letter-spacing: .06em;
-                    text-transform: uppercase; color: ${accent}; }
+                    text-transform: uppercase; color: var(--secondary-text-color); }
 
     /* ── HEADER SENSOR STRIP ─────────────────────────────── */
     .header-sensor-strip {
@@ -884,7 +884,7 @@ class PrinterCardV2 extends HTMLElement {
       --ha-card-background: color-mix(in srgb, ${accent} 8%, transparent); --ha-card-box-shadow: none;
       --ha-card-border-radius: 12px; --primary-text-color: white; --secondary-text-color: ${accent}; margin: 0;
     }
-    .tile-blue hui-tile-card .primary, .tile-blue hui-tile-card ha-tile-info .primary { color: white !important; }
+    .tile-blue hui-tile-card .primary, .tile-blue hui-tile-card ha-tile-info .primary { color: ${accent}; }
     .tile-blue hui-tile-card .state, .tile-blue hui-tile-card .value,
     .tile-blue hui-tile-card .secondary, .tile-blue hui-tile-card ha-tile-info .secondary { color: ${accent} !important; }
 
