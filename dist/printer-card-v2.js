@@ -955,7 +955,7 @@ class PrinterCardV2 extends HTMLElement {
     .progress-label { font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--secondary-text-color); }
     .progress-pct { font-size: .82rem; font-weight: 700; color: ${accent}; }
     .progress-track { height: 6px; border-radius: 6px; background: var(--secondary-background-color, rgba(0,0,0,.08)); overflow: hidden; }
-    .progress-fill { height: 100%; border-radius: 6px; background: linear-gradient(90deg,${accent},#ff9800); transition: width .4s ease; }
+    .progress-fill { height: 100%; border-radius: 6px; background: ${accent}; transition: width .4s ease; }
     .print-sensors { padding: 0 14px 14px; }
     .sensor-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
