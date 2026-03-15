@@ -315,7 +315,6 @@ class PrinterCardV2 extends HTMLElement {
   // ── Build: Header sensor strip (printing only) ────────────
   _buildHeaderSensorStrip() {
     const items = [
-      { label: "POWER", id: this._config.power_sensor_entity },
       { label: "BED",   id: this._config.bed_temp_entity },
       { label: "NOZ",   id: this._config.nozzle_temp_entity },
     ].filter(i => i.id && this._hass?.states[i.id]);
@@ -373,8 +372,20 @@ class PrinterCardV2 extends HTMLElement {
     const realStatus = (statusEntity && this._hass?.states[statusEntity])
       ? this._hass.states[statusEntity].state
       : (status === "printing" ? "Printing" : "Idle");
+    
+    // Add power value to status if power sensor exists
+    let displayStatus = realStatus;
+    if (this._config.power_sensor_entity && this._hass?.states[this._config.power_sensor_entity]) {
+      const powerState = this._hass.states[this._config.power_sensor_entity];
+      if (powerState.state !== "unavailable" && powerState.state !== "unknown") {
+        const powerValue = powerState.state;
+        const powerUnit = powerState.attributes?.unit_of_measurement || "W";
+        displayStatus = `${realStatus} (${powerValue}${powerUnit})`;
+      }
+    }
+    
     const text = document.createElement("div");
-    text.innerHTML = `<div class="unavail-name">${this._config.name || "3D-Drucker"}</div><div class="unavail-sub">${realStatus}</div>`;
+    text.innerHTML = `<div class="unavail-name">${this._config.name || "3D-Drucker"}</div><div class="unavail-sub">${displayStatus}</div>`;
     wrap.appendChild(text);
 
     if (status === "printing") {
@@ -473,11 +484,9 @@ class PrinterCardV2 extends HTMLElement {
     tempRow.className = "temp-row";
     const bedTile = this._buildTile(this._config.bed_temp_entity, "mdi:radiator");
     const nozzleTile = this._buildTile(this._config.nozzle_temp_entity, "mdi:printer-3d-nozzle-heat");
-    const powerTile = this._buildTile(this._config.power_sensor_entity, "mdi:lightning-bolt");
       
     if (bedTile) tempRow.appendChild(bedTile);
     if (nozzleTile) tempRow.appendChild(nozzleTile);
-    if (powerTile) tempRow.appendChild(powerTile);
     if (tempRow.children.length > 0) { wrap.appendChild(tempRow); return wrap; }
     return null;
   }
