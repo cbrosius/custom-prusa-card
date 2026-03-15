@@ -112,16 +112,17 @@ class PrinterCardV2 extends HTMLElement {
   // Returns true only when rendered inside the visual editor preview pane.
   // In dashboard edit mode the card is wrapped in HUI-CARD-EDIT-MODE — we walk
   // up the shadow-piercing host chain to detect that and exclude it.
+  // Visual editor preview: card sits inside HUI-DIALOG-EDIT-CARD.
+  // Dashboard edit mode: card sits inside HUI-CARD-EDIT-MODE (but NOT HUI-DIALOG-EDIT-CARD).
+  // Normal production: neither present.
   get _showAllStates() {
-    const chain = [];
     let el = this;
     while (el) {
-      if (el.tagName) chain.push(el.tagName);
+      if (el.tagName === "HUI-DIALOG-EDIT-CARD") return true;
       el = el.parentElement ||
            (el.getRootNode && el.getRootNode() !== el ? el.getRootNode().host : null);
     }
-    console.log("[PrinterCardV2] _showAllStates chain:", chain.join(" → "));
-    return false; // always normal for now
+    return false;
   }
 
 
