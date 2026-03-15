@@ -34,6 +34,19 @@ class PrinterCardV2Editor extends HTMLElement {
       { name: "eta_entity", label: "Fertigstellung (ETA) Sensor", selector: { entity: { domain: "sensor" } } },
       { name: "power_switch_entity", label: "Spannungsversorgungs-Schalter", selector: { entity: { domain: ["switch", "input_boolean"] } } },
       { name: "power_sensor_entity", label: "Leistungsaufnahme (W) Sensor", selector: { entity: { domain: "sensor" } } },
+      {
+        type: "expandable", title: "Kacheln während Druck anzeigen", icon: "mdi:view-grid",
+        schema: [
+          { name: "show_tile_layer",     label: "Layer",            selector: { boolean: {} } },
+          { name: "show_tile_progress",  label: "Fortschritt %",    selector: { boolean: {} } },
+          { name: "show_tile_bed",       label: "Bett-Temperatur",  selector: { boolean: {} } },
+          { name: "show_tile_nozzle",    label: "Nozzle-Temperatur",selector: { boolean: {} } },
+          { name: "show_tile_power",     label: "Leistung",         selector: { boolean: {} } },
+          { name: "show_tile_elapsed",   label: "Bisherige Zeit",   selector: { boolean: {} } },
+          { name: "show_tile_remaining", label: "Restlaufzeit",     selector: { boolean: {} } },
+          { name: "show_tile_eta",       label: "ETA",              selector: { boolean: {} } },
+        ]
+      },
     ];
   }
 
@@ -574,15 +587,17 @@ class PrinterCardV2 extends HTMLElement {
     sensorsWrap.className = "print-sensors";
     const grid = document.createElement("div");
     grid.className = "sensor-grid-2";
+    // show_tile_* defaults to true when undefined (opt-out model)
+    const show = (flag) => this._config[flag] !== false;
     [
-      this._buildLayerTile(),
-      this._buildTile(this._config.print_progress_entity, "mdi:percent"),
-      this._buildTile(this._config.bed_temp_entity, "mdi:radiator"),
-      this._buildTile(this._config.nozzle_temp_entity, "mdi:printer-3d-nozzle-heat"),
-      this._buildTile(this._config.power_sensor_entity, "mdi:lightning-bolt"),
-      this._buildTile(this._config.print_time_entity, "mdi:clock-outline"),
-      this._buildTile(this._config.print_time_left_entity, "mdi:clock-end"),
-      this._buildTile(this._config.eta_entity, "mdi:clock-check-outline"),
+      show("show_tile_layer")     ? this._buildLayerTile() : null,
+      show("show_tile_progress")  ? this._buildTile(this._config.print_progress_entity,  "mdi:percent") : null,
+      show("show_tile_bed")       ? this._buildTile(this._config.bed_temp_entity,         "mdi:radiator") : null,
+      show("show_tile_nozzle")    ? this._buildTile(this._config.nozzle_temp_entity,      "mdi:printer-3d-nozzle-heat") : null,
+      show("show_tile_power")     ? this._buildTile(this._config.power_sensor_entity,     "mdi:lightning-bolt") : null,
+      show("show_tile_elapsed")   ? this._buildTile(this._config.print_time_entity,       "mdi:clock-outline") : null,
+      show("show_tile_remaining") ? this._buildTile(this._config.print_time_left_entity,  "mdi:clock-end") : null,
+      show("show_tile_eta")       ? this._buildTile(this._config.eta_entity,              "mdi:clock-check-outline") : null,
     ].forEach(t => { if (t) grid.appendChild(t); });
     if (grid.children.length > 0) { sensorsWrap.appendChild(grid); wrap.appendChild(sensorsWrap); }
 
