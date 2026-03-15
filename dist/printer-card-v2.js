@@ -95,6 +95,14 @@ class PrinterCardV2 extends HTMLElement {
     return { name: "my3D-Printer", printer_status_entity: "", camera_entity: "", power_switch_entity: "", job_name_entity: "" };
   }
 
+  // HA sets this property to true when rendering in the editor preview panel
+  set preview(value) {
+    if (this._preview !== value) {
+      this._preview = value;
+      this._render();
+    }
+  }
+
   setConfig(config) {
     this._config = config;
     this._lastStatus = null;
@@ -257,7 +265,6 @@ class PrinterCardV2 extends HTMLElement {
   _render() {
     if (!this._hass) return;
     const sr = this.shadowRoot;
-    const status = this._lastStatus || this._status();
 
     sr.innerHTML = `<style>${this._css()}</style>`;
 
@@ -266,6 +273,70 @@ class PrinterCardV2 extends HTMLElement {
     lb.className = "lightbox";
     sr.appendChild(lb);
 
+    if (this._preview) {
+      this._renderPreview(sr);
+    } else {
+      this._renderNormal(sr);
+    }
+
+    this._propagateHass();
+  }
+
+  // ── Preview: all three states stacked ────────────────────
+  _renderPreview(sr) {
+    const views = [
+      { label: "Unavailable", build: () => {
+        const card = document.createElement("ha-card");
+        card.className = "printer-card-v2";
+        card.appendChild(this._buildUnavail());
+        return card;
+      }},
+      { label: "Idle", build: () => {
+        const card = document.createElement("ha-card");
+        card.className = "printer-card-v2";
+        card.appendChild(this._buildHeader("idle"));
+        const divider = document.createElement("div");
+        divider.className = "no-cam-divider";
+        card.appendChild(divider);
+        const bottom = this._buildIdleBottom();
+        if (bottom) card.appendChild(bottom);
+        return card;
+      }},
+      { label: "Printing", build: () => {
+        const card = document.createElement("ha-card");
+        card.className = "printer-card-v2";
+        card.appendChild(this._buildHeader("printing"));
+        const divider = document.createElement("div");
+        divider.className = "no-cam-divider";
+        card.appendChild(divider);
+        const bottom = this._buildPrintingBottom();
+        if (bottom) card.appendChild(bottom);
+        return card;
+      }},
+    ];
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "preview-stack";
+
+    views.forEach(({ label, build }) => {
+      const section = document.createElement("div");
+      section.className = "preview-section";
+
+      const chip = document.createElement("div");
+      chip.className = "preview-chip";
+      chip.textContent = label;
+      section.appendChild(chip);
+
+      section.appendChild(build());
+      wrapper.appendChild(section);
+    });
+
+    sr.appendChild(wrapper);
+  }
+
+  // ── Normal single-state render ────────────────────────────
+  _renderNormal(sr) {
+    const status = this._lastStatus || this._status();
     const card = document.createElement("ha-card");
     card.className = "printer-card-v2";
     sr.appendChild(card);
@@ -295,8 +366,6 @@ class PrinterCardV2 extends HTMLElement {
       const bottom = this._buildPrintingBottom();
       if (bottom) card.appendChild(bottom);
     }
-
-    this._propagateHass();
   }
 
   // ── Build: Unavailable ────────────────────────────────────
@@ -545,21 +614,27 @@ class PrinterCardV2 extends HTMLElement {
     const jobName = document.createElement("div");
     jobName.className = "job-name";
     const jobId = this._config.job_name_entity;
-    jobName.textContent = (jobId && this._hass?.states[jobId]) ? (this._hass.states[jobId].state || "—") : "—";
+    jobName.textContent = this._preview ? "benchy_v3_final_FINAL.gcode" : ((jobId && this._hass?.states[jobId]) ? (this._hass.states[jobId].state || "—") : "—");
     jobInfo.appendChild(jobName);
 
     const timeRow = document.createElement("div");
     timeRow.className = "time-row";
     const elapsedId = this._config.print_time_entity;
     const elapsedAvail = elapsedId && this._hass?.states[elapsedId] && !["unavailable", "unknown"].includes(this._hass.states[elapsedId].state);
-    if (elapsedAvail) {
+    if (this._preview) {
+      timeRow.appendChild(this._buildTimeCol("ELAPSED", null, false, "1h 23m"));
+      timeRow.appendChild(this._buildTimeCol("REMAINING", null, true, "47m"));
+      timeRow.appendChild(this._buildTimeCol("ETA", null, true, "15:42"));
+    } else if (elapsedAvail) {
       timeRow.appendChild(this._buildTimeCol("ELAPSED", elapsedId, false));
+      timeRow.appendChild(this._buildTimeCol("REMAINING", this._config.print_time_left_entity, true));
+      timeRow.appendChild(this._buildTimeCol("ETA", this._config.eta_entity, true));
     } else {
       const layerInfo = this._getLayerInfo();
       timeRow.appendChild(this._buildTimeCol("LAYER", null, true, layerInfo));
+      timeRow.appendChild(this._buildTimeCol("REMAINING", this._config.print_time_left_entity, true));
+      timeRow.appendChild(this._buildTimeCol("ETA", this._config.eta_entity, true));
     }
-    timeRow.appendChild(this._buildTimeCol("REMAINING", this._config.print_time_left_entity, true));
-    timeRow.appendChild(this._buildTimeCol("ETA", this._config.eta_entity, true));
     jobInfo.appendChild(timeRow);
     infoRow.appendChild(jobInfo);
     wrap.appendChild(infoRow);
@@ -694,6 +769,7 @@ class PrinterCardV2 extends HTMLElement {
   }
 
   _pct() {
+    if (this._preview) return 63; // stub for preview
     const id = this._config.print_progress_entity;
     if (!id || !this._hass) return 0;
     return Math.min(parseFloat(this._hass.states[id]?.state) || 0, 100);
@@ -851,6 +927,17 @@ class PrinterCardV2 extends HTMLElement {
     .progress-fill { height: 100%; border-radius: 6px; background: linear-gradient(90deg,${accent},#ff9800); transition: width .4s ease; }
     .print-sensors { padding: 0 14px 14px; }
     .sensor-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    /* ── PREVIEW STACK ────────────────────────────────────── */
+    .preview-stack { display: flex; flex-direction: column; gap: 16px; padding: 12px; }
+    .preview-section { display: flex; flex-direction: column; gap: 6px; }
+    .preview-chip {
+      display: inline-block; align-self: flex-start;
+      font-size: .65rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+      color: var(--secondary-text-color);
+      background: var(--secondary-background-color, rgba(0,0,0,.06));
+      border-radius: 6px; padding: 3px 8px;
+    }
     `;
   }
 }
