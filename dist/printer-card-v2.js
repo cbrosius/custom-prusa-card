@@ -155,11 +155,29 @@ class PrinterCardV2 extends HTMLElement {
     this.shadowRoot.querySelectorAll(
       "hui-tile-card, hui-sensor-card, ha-icon-button, ha-state-label-badge, mushroom-template-card"
     ).forEach(el => { if (el.hass !== this._hass) el.hass = this._hass; });
-    // Guard each helper — avoids crashes if DOM isn't fully built yet
-    this._updateHeaderSensorStrip();
     this._updateJobName();
     this._updateTimeValues();
     this._updateProgressBar();
+    this._updateHeaderSensorStrip();
+  }
+
+  _updateHeaderSensorStrip() {
+    const strip = this.shadowRoot.querySelector(".header-sensor-strip");
+    if (!strip) return;
+    const items = [
+      { id: this._config.power_sensor_entity },
+      { id: this._config.bed_temp_entity },
+      { id: this._config.nozzle_temp_entity },
+    ];
+    strip.querySelectorAll(".header-sensor-col").forEach((col, idx) => {
+      const id = items[idx]?.id;
+      if (!id || !this._hass?.states[id]) return;
+      const s = this._hass.states[id];
+      const val = s.state;
+      const unit = s.attributes?.unit_of_measurement || "";
+      const v = col.querySelector(".header-sensor-value");
+      if (v) v.textContent = (val !== "unavailable" && val !== "unknown") ? `${val}${unit}` : "—";
+    });
   }
 
   _updateJobName() {
