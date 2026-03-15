@@ -33,7 +33,6 @@ class PrinterCardV2Editor extends HTMLElement {
           { name: "current_layer_entity", label: "Aktueller Layer Sensor", selector: { entity: { domain: "sensor" } } },
           { name: "total_layers_entity", label: "Gesamt-Layer Sensor", selector: { entity: { domain: "sensor" } } },
           { name: "print_start_time", label: "Druckstart-Zeit Sensor", selector: { entity: { domain: "sensor" } } },
-          { name: "print_time_left_entity", label: "Restlaufzeit Sensor", selector: { entity: { domain: "sensor" } } },
           { name: "eta_entity", label: "Fertigstellung (ETA) Sensor", selector: { entity: { domain: "sensor" } } },
         ]
       },
@@ -53,7 +52,6 @@ class PrinterCardV2Editor extends HTMLElement {
           { name: "show_tile_nozzle",    label: "Nozzle-Temperatur",selector: { boolean: {} } },
           { name: "show_tile_power",     label: "Leistung",         selector: { boolean: {} } },
           { name: "show_tile_elapsed",   label: "Bisherige Zeit",   selector: { boolean: {} } },
-          { name: "show_tile_remaining", label: "Restlaufzeit",     selector: { boolean: {} } },
           { name: "show_tile_eta",       label: "ETA",              selector: { boolean: {} } },
         ]
       },
@@ -253,19 +251,6 @@ class PrinterCardV2 extends HTMLElement {
   }
 
   _updateTimeValues() {
-    // Update REMAINING column (plain text)
-    const remainingEl = this.shadowRoot.querySelector(".t-value-remaining");
-    if (remainingEl) {
-      const id = this._config.print_time_left_entity;
-      if (id && this._hass?.states[id]) {
-        const s = this._hass.states[id].state;
-        const u = this._hass.states[id].attributes?.unit_of_measurement || "";
-        remainingEl.textContent = (s !== "unavailable" && s !== "unknown") ? `${s} ${u}`.trim() : "—";
-      } else {
-        remainingEl.textContent = "—";
-      }
-    }
-
     // Update ELAPSED ha-relative-time (update datetime in case state changed)
     const elapsedRel = this.shadowRoot.querySelector(".t-relative-elapsed");
     if (elapsedRel) {
@@ -701,12 +686,10 @@ class PrinterCardV2 extends HTMLElement {
     const timeRow = document.createElement("div");
     timeRow.className = "time-row";
     if (this._showAllStates) {
-      timeRow.appendChild(this._buildTimeCol("ELAPSED", null, false, "2 hours ago"));
-      timeRow.appendChild(this._buildTimeCol("REMAINING", null, true, "47m"));
+      timeRow.appendChild(this._buildTimeCol("START-TIME", null, false, "2 hours ago"));
       timeRow.appendChild(this._buildTimeCol("ETA", null, true, "in 47 minutes"));
     } else {
-      timeRow.appendChild(this._buildTimeCol("ELAPSED", this._config.print_start_time, false));
-      timeRow.appendChild(this._buildTimeCol("REMAINING", this._config.print_time_left_entity, true));
+      timeRow.appendChild(this._buildTimeCol("START-TIME", this._config.print_start_time, false));
       timeRow.appendChild(this._buildTimeCol("ETA", this._config.eta_entity, true));
     }
     jobInfo.appendChild(timeRow);
@@ -744,7 +727,6 @@ class PrinterCardV2 extends HTMLElement {
       show("show_tile_nozzle")    ? this._buildTile(this._config.nozzle_temp_entity,      "mdi:printer-3d-nozzle-heat") : null,
       show("show_tile_power")     ? this._buildTile(this._config.power_sensor_entity,     "mdi:lightning-bolt") : null,
       show("show_tile_elapsed")   ? this._buildTile(this._config.print_start_time,        "mdi:clock-outline") : null,
-      show("show_tile_remaining") ? this._buildTile(this._config.print_time_left_entity,  "mdi:clock-end") : null,
       show("show_tile_eta")       ? this._buildTile(this._config.eta_entity,              "mdi:clock-check-outline") : null,
     ].forEach(t => { if (t) grid.appendChild(t); });
     if (grid.children.length > 0) { sensorsWrap.appendChild(grid); wrap.appendChild(sensorsWrap); }
@@ -804,16 +786,17 @@ class PrinterCardV2 extends HTMLElement {
     const l = document.createElement("div"); l.className = "t-label"; l.textContent = label;
     wrap.appendChild(l);
 
-    // Use ha-relative-time for both ELAPSED (print_start_time) and ETA
-    const useRelativeTime = (label === "ELAPSED" || label === "ETA");
+    // Use ha-relative-time for both START-TIME (print_start_time) and ETA
+    const useRelativeTime = (label === "START-TIME" || label === "ETA");
 
     if (useRelativeTime && entityId && this._hass?.states[entityId]) {
       const state = this._hass.states[entityId].state;
       if (state && state !== "unavailable" && state !== "unknown") {
         const relTime = document.createElement("ha-relative-time");
-        relTime.className = "t-value" + (accent ? " remaining" : "");
+        relTime.className = "t-value accent";
         // Unique class for targeted updates in _updateTimeValues
-        relTime.classList.add(label === "ELAPSED" ? "t-relative-elapsed" : "t-relative-eta");
+        relTime.classList.add(label === "START-TIME" ? "t-relative-elapsed" : "t-relative-eta");
+        if (accent) relTime.classList.add("remaining");
         relTime.hass = this._hass;
         relTime.datetime = new Date(state);
         relTime.capitalize = true;
@@ -1028,12 +1011,13 @@ class PrinterCardV2 extends HTMLElement {
     .thumb-sm-ph ha-icon { --mdc-icon-size: 26px; color: var(--secondary-text-color); }
     .job-info { flex: 1; min-width: 0; }
     .job-name { font-size: .9rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; }
-    .time-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-top: 5px; }
+    .time-row { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; margin-top: 5px; }
     .t-label { font-size: .62rem; text-transform: uppercase; letter-spacing: .06em; color: var(--secondary-text-color); font-weight: 600; white-space: nowrap; }
     .t-value { font-size: .82rem; font-weight: 600; margin-top: 1px; white-space: nowrap; }
     .t-value.remaining { color: ${accent}; }
-    .ha-relative-time { font-size: .82rem; font-weight: 600; margin-top: 1px; display: block; }
-    .ha-relative-time.remaining { color: ${accent}; }
+    ha-relative-time { font-size: .82rem; font-weight: 600; margin-top: 1px; display: block; }
+    ha-relative-time.accent { color: ${accent}; }
+    ha-relative-time.remaining { color: ${accent}; }
     .progress-wrap { padding: 10px 14px 14px; }
     .progress-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
     .progress-label { font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: ${accent}; }
