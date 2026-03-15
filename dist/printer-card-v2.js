@@ -205,18 +205,22 @@ class PrinterCardV2 extends HTMLElement {
   _updateHeaderSensorStrip() {
     const strip = this.shadowRoot.querySelector(".header-sensor-strip");
     if (!strip) return;
-    const items = [
-      { id: this._config.bed_temp_entity },
-      { id: this._config.nozzle_temp_entity },
-    ];
-    strip.querySelectorAll(".header-sensor-col").forEach((col, idx) => {
-      const id = items[idx]?.id;
-      if (!id || !this._hass?.states[id]) return;
-      const s = this._hass.states[id];
-      const val = s.state;
-      const unit = s.attributes?.unit_of_measurement || "";
-      const v = col.querySelector(".header-sensor-value");
-      if (v) v.textContent = (val !== "unavailable" && val !== "unknown") ? `${val}${unit}` : "—";
+    strip.querySelectorAll(".header-sensor-col").forEach((col) => {
+      const labelEl = col.querySelector(".header-sensor-label");
+      const valueEl = col.querySelector(".header-sensor-value");
+      if (!labelEl || !valueEl) return;
+      const label = labelEl.textContent;
+      if (label === "LAYER") {
+        valueEl.textContent = this._getLayerInfo();
+      } else {
+        const idMap = { BED: this._config.bed_temp_entity, NOZ: this._config.nozzle_temp_entity };
+        const id = idMap[label];
+        if (!id || !this._hass?.states[id]) return;
+        const s = this._hass.states[id];
+        const val = s.state;
+        const unit = s.attributes?.unit_of_measurement || "";
+        valueEl.textContent = (val !== "unavailable" && val !== "unknown") ? `${val}${unit}` : "—";
+      }
     });
   }
 
@@ -236,13 +240,7 @@ class PrinterCardV2 extends HTMLElement {
       const u = this._hass.states[id].attributes?.unit_of_measurement || "";
       return (s !== "unavailable" && s !== "unknown") ? `${s} ${u}`.trim() : "—";
     };
-    const elapsedId = this._config.print_time_entity;
-    const elapsedAvail = elapsedId && this._hass?.states[elapsedId] && !["unavailable", "unknown"].includes(this._hass.states[elapsedId].state);
-    if (elapsedAvail) {
-      els[0].textContent = read(elapsedId);
-    } else {
-      els[0].textContent = this._getLayerInfo();
-    }
+    els[0].textContent = read(this._config.print_time_entity);
     els[1].textContent = read(this._config.print_time_left_entity);
     if (els.length >= 3) els[2].textContent = read(this._config.eta_entity);
   }
@@ -409,10 +407,12 @@ class PrinterCardV2 extends HTMLElement {
   }
 
   _buildHeaderSensorStrip() {
+    const layerInfo = this._getLayerInfo();
     const items = [
+      ...(layerInfo !== "—" ? [{ label: "LAYER", id: null, value: layerInfo }] : []),
       { label: "BED",   id: this._config.bed_temp_entity },
       { label: "NOZ",   id: this._config.nozzle_temp_entity },
-    ].filter(i => i.id && this._hass?.states[i.id]);
+    ].filter(i => (i.id && this._hass?.states[i.id]) || i.value !== undefined);
 
     if (items.length === 0) return null;
 
@@ -428,17 +428,20 @@ class PrinterCardV2 extends HTMLElement {
       const col = document.createElement("div");
       col.className = "header-sensor-col";
 
-      const stateObj = this._hass.states[item.id];
-      const val = stateObj.state;
-      const unit = stateObj.attributes?.unit_of_measurement || "";
-
       const label = document.createElement("div");
       label.className = "header-sensor-label";
       label.textContent = item.label;
 
       const value = document.createElement("div");
       value.className = "header-sensor-value";
-      value.textContent = (val !== "unavailable" && val !== "unknown") ? `${val}${unit}` : "—";
+      if (item.value !== undefined) {
+        value.textContent = item.value;
+      } else {
+        const stateObj = this._hass.states[item.id];
+        const val = stateObj.state;
+        const unit = stateObj.attributes?.unit_of_measurement || "";
+        value.textContent = (val !== "unavailable" && val !== "unknown") ? `${val}${unit}` : "—";
+      }
 
       col.appendChild(label);
       col.appendChild(value);
@@ -642,18 +645,12 @@ class PrinterCardV2 extends HTMLElement {
     const timeRow = document.createElement("div");
     timeRow.className = "time-row";
     const elapsedId = this._config.print_time_entity;
-    const elapsedAvail = elapsedId && this._hass?.states[elapsedId] && !["unavailable", "unknown"].includes(this._hass.states[elapsedId].state);
     if (this._showAllStates) {
       timeRow.appendChild(this._buildTimeCol("ELAPSED", null, false, "1h 23m"));
       timeRow.appendChild(this._buildTimeCol("REMAINING", null, true, "47m"));
       timeRow.appendChild(this._buildTimeCol("ETA", null, true, "15:42"));
-    } else if (elapsedAvail) {
-      timeRow.appendChild(this._buildTimeCol("ELAPSED", elapsedId, false));
-      timeRow.appendChild(this._buildTimeCol("REMAINING", this._config.print_time_left_entity, true));
-      timeRow.appendChild(this._buildTimeCol("ETA", this._config.eta_entity, true));
     } else {
-      const layerInfo = this._getLayerInfo();
-      timeRow.appendChild(this._buildTimeCol("LAYER", null, true, layerInfo));
+      timeRow.appendChild(this._buildTimeCol("ELAPSED", elapsedId, false));
       timeRow.appendChild(this._buildTimeCol("REMAINING", this._config.print_time_left_entity, true));
       timeRow.appendChild(this._buildTimeCol("ETA", this._config.eta_entity, true));
     }
