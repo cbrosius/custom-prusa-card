@@ -1023,7 +1023,7 @@ class PrinterCardV2 extends HTMLElement {
     ha-relative-time.t-rel-inline { display: inline; font-size: inherit; font-weight: inherit; color: inherit; }
     .progress-wrap { padding: 10px 14px 14px; }
     .progress-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
-    .progress-label { font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: ${accent}; }
+    .progress-label { font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--secondary-background-color); }
     .progress-pct { font-size: .82rem; font-weight: 700; color: ${accent}; }
     .progress-track { height: 6px; border-radius: 6px; background: var(--secondary-background-color, rgba(0,0,0,.08)); overflow: hidden; }
     .progress-fill { height: 100%; border-radius: 6px; background: ${accent}; transition: width .4s ease; }
