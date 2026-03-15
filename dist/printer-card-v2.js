@@ -229,7 +229,7 @@ class PrinterCardV2 extends HTMLElement {
 
     let displayStatus = realStatus;
     let powerValueAvailable = false;
-    if (realStatus !== "unavailable" && this._config.power_sensor_entity && this._hass?.states[this._config.power_sensor_entity]) {
+    if (this._status() !== "unavailable" && this._config.power_sensor_entity && this._hass?.states[this._config.power_sensor_entity]) {
       const powerState = this._hass.states[this._config.power_sensor_entity];
       if (powerState.state !== "unavailable" && powerState.state !== "unknown") {
         const powerValue = powerState.state;
