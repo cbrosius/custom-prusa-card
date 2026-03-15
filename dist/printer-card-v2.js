@@ -156,6 +156,7 @@ class PrinterCardV2 extends HTMLElement {
       "hui-tile-card, hui-sensor-card, ha-icon-button, ha-state-label-badge, mushroom-template-card"
     ).forEach(el => { if (el.hass !== this._hass) el.hass = this._hass; });
     // Guard each helper — avoids crashes if DOM isn't fully built yet
+    this._updateHeaderSensorStrip();
     this._updateJobName();
     this._updateTimeValues();
     this._updateProgressBar();
@@ -290,6 +291,48 @@ class PrinterCardV2 extends HTMLElement {
     wrap.appendChild(text);
     wrap.appendChild(powerWrap);
     return wrap;
+  }
+
+  _buildHeaderSensorStrip() {
+    const items = [
+      { label: "POWER", id: this._config.power_sensor_entity },
+      { label: "BED",   id: this._config.bed_temp_entity },
+      { label: "NOZ",   id: this._config.nozzle_temp_entity },
+    ].filter(i => i.id && this._hass?.states[i.id]);
+
+    if (items.length === 0) return null;
+
+    const strip = document.createElement("div");
+    strip.className = "header-sensor-strip";
+
+    items.forEach((item, idx) => {
+      if (idx > 0) {
+        const div = document.createElement("div");
+        div.className = "header-sensor-divider";
+        strip.appendChild(div);
+      }
+      const col = document.createElement("div");
+      col.className = "header-sensor-col";
+
+      const stateObj = this._hass.states[item.id];
+      const val = stateObj.state;
+      const unit = stateObj.attributes?.unit_of_measurement || "";
+
+      const label = document.createElement("div");
+      label.className = "header-sensor-label";
+      label.textContent = item.label;
+
+      const value = document.createElement("div");
+      value.className = "header-sensor-value";
+      value.textContent = (val !== "unavailable" && val !== "unknown")
+        ? `${val}${unit}` : "—";
+
+      col.appendChild(label);
+      col.appendChild(value);
+      strip.appendChild(col);
+    });
+
+    return strip;
   }
 
   // ── Build: Header (idle / printing) ──────────────────────
@@ -673,6 +716,45 @@ class PrinterCardV2 extends HTMLElement {
     .power-wrap   { display: flex; align-items: center; gap: 6px; margin-left: auto; }
     .power-label  { font-size: .72rem; font-weight: 600; letter-spacing: .06em;
                     text-transform: uppercase; color: var(--secondary-text-color); }
+
+    /* ── HEADER SENSOR STRIP ─────────────────────────────── */
+    .header-sensor-strip {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      margin-left: auto;
+      background: var(--secondary-background-color, rgba(0,0,0,.05));
+      border-radius: 10px;
+      padding: 6px 4px;
+      flex-shrink: 0;
+    }
+    .header-sensor-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 10px;
+      min-width: 48px;
+    }
+    .header-sensor-divider {
+      width: 1px;
+      background: var(--divider-color, rgba(128,128,128,.25));
+      align-self: stretch;
+      margin: 2px 0;
+    }
+    .header-sensor-label {
+      font-size: .6rem;
+      font-weight: 700;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: var(--secondary-text-color);
+    }
+    .header-sensor-value {
+      font-size: .9rem;
+      font-weight: 700;
+      color: #ff6d00;
+      margin-top: 1px;
+      white-space: nowrap;
+    }
 
     /* ── CAMERA ──────────────────────────────────────────── */
     .camera-area {
