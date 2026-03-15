@@ -794,7 +794,7 @@ class PrinterCardV2 extends HTMLElement {
 
     /* ── IDLE BOTTOM ──────────────────────────────────────── */
     .idle-bottom { padding: 12px 14px 14px; }
-    .temp-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .temp-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
     /* ── PRINTING BOTTOM ──────────────────────────────────── */
     .print-info-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px 0; }
