@@ -26,7 +26,7 @@ class PrinterCardV2Editor extends HTMLElement {
         schema: [
           { name: "accent_color", label: "Akzentfarbe (während Drucken)", selector: { color_rgb: {} } },
           { name: "job_name_entity", label: "Dateiname / Job-Name Sensor", selector: { entity: { domain: "sensor" } } },
-          { name: "thumbnail_entity", label: "Modell-Vorschaubild (Sensor/Entity)", selector: { entity: { domain: "camera","image" : any } } },
+          { name: "thumbnail_entity", label: "Modell-Vorschaubild", selector: { entity: { domain: ["camera", "image"] } } },
           { name: "print_progress_entity", label: "Druckfortschritt (%) Sensor", selector: { entity: { domain: "sensor" } } },
           { name: "bed_temp_entity", label: "Druckbett-Temperatur Sensor", selector: { entity: { domain: "sensor" } } },
           { name: "nozzle_temp_entity", label: "Nozzle-Temperatur Sensor", selector: { entity: { domain: "sensor" } } },
