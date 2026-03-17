@@ -851,6 +851,7 @@ class PrinterCardV2 extends HTMLElement {
     const btn = document.createElement("ha-icon-button");
     btn.className = `cam-action-btn ${cssClass}`; btn.dataset.action = action;
     const inner = document.createElement("ha-icon"); inner.setAttribute("icon", icon);
+    inner.setAttribute("slot", "icon");
     btn.appendChild(inner);
     btn.addEventListener("click", (e) => { e.stopPropagation(); this._doAction(action); });
     return btn;
