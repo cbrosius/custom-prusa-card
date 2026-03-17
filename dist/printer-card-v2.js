@@ -849,11 +849,16 @@ class PrinterCardV2 extends HTMLElement {
 
   _makeIconButton(icon, cssClass, action) {
     const btn = document.createElement("ha-icon-button");
-    btn.className = `cam-action-btn ${cssClass}`; btn.dataset.action = action;
-    const inner = document.createElement("ha-icon"); inner.setAttribute("icon", icon);
-    inner.setAttribute("slot", "icon");
-    btn.appendChild(inner);
-    btn.addEventListener("click", (e) => { e.stopPropagation(); this._doAction(action); });
+    btn.className = `cam-action-btn ${cssClass}`;
+    
+    // Setze das Icon nicht über den Slot, sondern direkt als Attribut, 
+    // falls die Version von HA dies unterstützt:
+    btn.setAttribute("icon", icon); 
+    
+    btn.addEventListener("click", (e) => { 
+      e.stopPropagation(); 
+      this._doAction(action); 
+    });
     return btn;
   }
 
