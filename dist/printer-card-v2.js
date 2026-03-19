@@ -977,7 +977,7 @@ class PrinterCardV2 extends HTMLElement {
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
 
     /* ── BUTTONS ──────────────────────────────────────────── */
-    .cam-action-btn { --mdc-icon-button-size: 40px; --mdc-icon-size: 20px; border-radius: 50%; }
+    .cam-action-btn { --mdc-icon-button-size: 40px; --mdc-icon-size: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
     .btn-power-on  { background: rgba(76,175,80,.15); color: #4caf50; }
     .btn-power-off { background: rgba(244,67,54,.15); color: #f44336; }
 
