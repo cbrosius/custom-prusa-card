@@ -849,16 +849,10 @@ class PrinterCardV2 extends HTMLElement {
 
   _makeIconButton(icon, cssClass, action) {
     const btn = document.createElement("ha-icon-button");
-    btn.className = `cam-action-btn ${cssClass}`;
-    
-    // Setze das Icon nicht über den Slot, sondern direkt als Attribut, 
-    // falls die Version von HA dies unterstützt:
-    btn.setAttribute("icon", icon); 
-    
-    btn.addEventListener("click", (e) => { 
-      e.stopPropagation(); 
-      this._doAction(action); 
-    });
+    btn.className = `cam-action-btn ${cssClass}`; btn.dataset.action = action;
+    const inner = document.createElement("ha-icon"); inner.setAttribute("icon", icon);
+    btn.appendChild(inner);
+    btn.addEventListener("click", (e) => { e.stopPropagation(); this._doAction(action); });
     return btn;
   }
 
@@ -983,7 +977,7 @@ class PrinterCardV2 extends HTMLElement {
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
 
     /* ── BUTTONS ──────────────────────────────────────────── */
-    .cam-action-btn { --mdc-icon-button-size: 40px; --mdc-icon-size: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center;}
+    .cam-action-btn { --mdc-icon-button-size: 40px; --mdc-icon-size: 20px; border-radius: 50%; }
     .btn-power-on  { background: rgba(76,175,80,.15); color: #4caf50; }
     .btn-power-off { background: rgba(244,67,54,.15); color: #f44336; }
 
